@@ -21,7 +21,8 @@ export async function POST(req: Request) {
     const [result] = await db.insert(users).values({ email, passwordHash, name }).returning({ id: users.id });
 
     return NextResponse.json({ id: result.id }, { status: 201 });
-  } catch {
+  } catch (error) {
+    console.error("Signup error:", error);
     return NextResponse.json({ error: "Failed to create account" }, { status: 500 });
   }
 }
