@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import DrinkingWindowBadge from "@/components/drinking-window-badge";
+import { SkeletonWineDetail } from "@/components/skeleton";
 
 interface Wine {
   id: number;
@@ -20,6 +21,9 @@ interface Wine {
 interface InventoryEntry {
   id: number;
   quantity: number;
+  purchaseDate: string | null;
+  purchasePrice: number | null;
+  notes: string | null;
   wine: { id: number };
 }
 
@@ -31,6 +35,11 @@ export default function WineDetailPage() {
   const [loading, setLoading] = useState(true);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
 
+  // Metadata editing state
+  const [purchaseDate, setPurchaseDate] = useState("");
+  const [purchasePrice, setPurchasePrice] = useState("");
+  const [notes, setNotes] = useState("");
+
   useEffect(() => {
     Promise.all([
       fetch(`/api/wines/${id}`).then((r) => r.json()),
@@ -38,7 +47,12 @@ export default function WineDetailPage() {
     ]).then(([wineData, inventoryData]) => {
       setWine(wineData);
       const entry = inventoryData.find((i: InventoryEntry) => i.wine.id === Number(id));
-      setInventoryEntry(entry || null);
+      if (entry) {
+        setInventoryEntry(entry);
+        setPurchaseDate(entry.purchaseDate || "");
+        setPurchasePrice(entry.purchasePrice != null ? String(entry.purchasePrice) : "");
+        setNotes(entry.notes || "");
+      }
       setLoading(false);
     });
   }, [id]);
@@ -50,22 +64,47 @@ export default function WineDetailPage() {
     }
   }, [actionMsg]);
 
-  async function drankOne() {
+  async function updateQuantity(delta: number) {
     if (!inventoryEntry) return;
-    const newQty = inventoryEntry.quantity - 1;
-    if (newQty < 1) {
-      if (!confirm(`This is your last bottle of ${wine?.brand}. Remove from cellar?`)) return;
-      await fetch(`/api/inventory/${inventoryEntry.id}`, { method: "DELETE" });
-      setInventoryEntry(null);
-      setActionMsg("Last bottle finished! Cheers!");
-    } else {
-      await fetch(`/api/inventory/${inventoryEntry.id}`, {
+    const newQty = inventoryEntry.quantity + delta;
+    try {
+      if (newQty < 1) {
+        if (!confirm(`This is your last bottle of ${wine?.brand}. Remove from cellar?`)) return;
+        const res = await fetch(`/api/inventory/${inventoryEntry.id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error();
+        setInventoryEntry(null);
+        setActionMsg("Last bottle finished! Cheers!");
+      } else {
+        const res = await fetch(`/api/inventory/${inventoryEntry.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ quantity: newQty }),
+        });
+        if (!res.ok) throw new Error();
+        setInventoryEntry({ ...inventoryEntry, quantity: newQty });
+        setActionMsg(`${newQty} bottle${newQty > 1 ? "s" : ""} remaining`);
+      }
+    } catch {
+      setActionMsg("Failed to update — try again");
+    }
+  }
+
+  async function saveMetadata(field: string, value: string) {
+    if (!inventoryEntry) return;
+    const body: Record<string, unknown> = {};
+    if (field === "purchaseDate") body.purchaseDate = value || null;
+    if (field === "purchasePrice") body.purchasePrice = value ? parseFloat(value) : null;
+    if (field === "notes") body.notes = value || null;
+
+    try {
+      const res = await fetch(`/api/inventory/${inventoryEntry.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quantity: newQty }),
+        body: JSON.stringify(body),
       });
-      setInventoryEntry({ ...inventoryEntry, quantity: newQty });
-      setActionMsg(`Cheers! ${newQty} bottle${newQty > 1 ? "s" : ""} remaining`);
+      if (!res.ok) throw new Error();
+    } catch {
+      setActionMsg("Failed to save — try again");
     }
   }
 
@@ -82,7 +121,8 @@ export default function WineDetailPage() {
       body: JSON.stringify({ wineId: wine.id, quantity }),
     });
     const data = await res.json();
-    setInventoryEntry({ id: data.id, quantity, wine: { id: wine.id } });
+    const entry = { id: data.id, quantity, purchaseDate: null, purchasePrice: null, notes: null, wine: { id: wine.id } };
+    setInventoryEntry(entry);
     setActionMsg("Added to cellar!");
   }
 
@@ -97,11 +137,7 @@ export default function WineDetailPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-600" />
-      </div>
-    );
+    return <SkeletonWineDetail />;
   }
 
   if (!wine) {
@@ -148,7 +184,7 @@ export default function WineDetailPage() {
           )}
         </div>
 
-        {/* Inventory status */}
+        {/* Inventory status with +/- controls */}
         {inventoryEntry && (
           <div className="bg-white rounded-2xl shadow-sm p-5">
             <div className="flex items-center justify-between">
@@ -158,12 +194,21 @@ export default function WineDetailPage() {
                   {inventoryEntry.quantity} bottle{inventoryEntry.quantity !== 1 ? "s" : ""}
                 </p>
               </div>
-              <button
-                onClick={drankOne}
-                className="rounded-xl bg-rose-600 px-5 py-3 text-white font-semibold hover:bg-rose-700 active:bg-rose-800 transition"
-              >
-                Drank One 🍷
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => updateQuantity(-1)}
+                  className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 text-xl font-medium hover:bg-gray-200 active:bg-gray-300 transition flex items-center justify-center"
+                >
+                  −
+                </button>
+                <span className="w-8 text-center text-lg font-bold text-gray-900">{inventoryEntry.quantity}</span>
+                <button
+                  onClick={() => updateQuantity(1)}
+                  className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 text-xl font-medium hover:bg-gray-200 active:bg-gray-300 transition flex items-center justify-center"
+                >
+                  +
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -205,6 +250,50 @@ export default function WineDetailPage() {
           )}
           <p className="text-xs text-gray-300">Rating estimated by AI based on wine knowledge</p>
         </div>
+
+        {/* Cellar Notes — only when in inventory */}
+        {inventoryEntry && (
+          <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+            <h2 className="font-semibold text-gray-900">Cellar Notes</h2>
+
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500 font-medium">Purchase Date</label>
+              <input
+                type="date"
+                value={purchaseDate}
+                onChange={(e) => setPurchaseDate(e.target.value)}
+                onBlur={(e) => saveMetadata("purchaseDate", e.target.value)}
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 outline-none transition"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500 font-medium">Purchase Price ($)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={purchasePrice}
+                onChange={(e) => setPurchasePrice(e.target.value)}
+                onBlur={(e) => saveMetadata("purchasePrice", e.target.value)}
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 outline-none transition"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500 font-medium">Notes</label>
+              <textarea
+                rows={3}
+                placeholder="Tasting notes, storage location, etc."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                onBlur={(e) => saveMetadata("notes", e.target.value)}
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 outline-none transition resize-none"
+              />
+            </div>
+          </div>
+        )}
 
         {!inventoryEntry && (
           <div className="flex gap-3">

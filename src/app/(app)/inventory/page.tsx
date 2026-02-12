@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import WineCard from "@/components/wine-card";
+import SwipeableRow from "@/components/swipeable-row";
+import { SkeletonWineCard } from "@/components/skeleton";
 import Link from "next/link";
 
 interface InventoryItem {
@@ -76,7 +78,8 @@ export default function InventoryPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [toast, setToast] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadData = useCallback((silent = false) => {
+    if (!silent) setLoading(true);
     fetch("/api/inventory")
       .then((r) => r.json())
       .then((data) => {
@@ -84,6 +87,18 @@ export default function InventoryPage() {
         setLoading(false);
       });
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    const onVisChange = () => {
+      if (document.visibilityState === "visible") loadData(true);
+    };
+    document.addEventListener("visibilitychange", onVisChange);
+    return () => document.removeEventListener("visibilitychange", onVisChange);
+  }, [loadData]);
 
   useEffect(() => {
     if (toast) {
@@ -105,28 +120,57 @@ export default function InventoryPage() {
     });
 
   const sorted = sortItems(filtered, sort);
+  const hasFilters = filter !== "" || statusFilter !== "all";
 
   async function updateQuantity(item: InventoryItem, delta: number) {
     const newQty = item.quantity + delta;
-    if (newQty < 1) {
-      if (!confirm(`Remove ${item.wine.brand} from your cellar?`)) return;
-      await fetch(`/api/inventory/${item.id}`, { method: "DELETE" });
+    try {
+      if (newQty < 1) {
+        if (!confirm(`Remove ${item.wine.brand} from your cellar?`)) return;
+        const res = await fetch(`/api/inventory/${item.id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error();
+        setItems((prev) => prev.filter((i) => i.id !== item.id));
+        setToast(`${item.wine.brand} removed`);
+      } else {
+        const res = await fetch(`/api/inventory/${item.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ quantity: newQty }),
+        });
+        if (!res.ok) throw new Error();
+        setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, quantity: newQty } : i)));
+      }
+    } catch {
+      setToast("Failed to update — try again");
+    }
+  }
+
+  async function deleteItem(item: InventoryItem) {
+    if (!confirm(`Remove ${item.wine.brand} from your cellar?`)) return;
+    try {
+      const res = await fetch(`/api/inventory/${item.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
       setItems((prev) => prev.filter((i) => i.id !== item.id));
       setToast(`${item.wine.brand} removed`);
-    } else {
-      await fetch(`/api/inventory/${item.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quantity: newQty }),
-      });
-      setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, quantity: newQty } : i)));
+    } catch {
+      setToast("Failed to remove — try again");
     }
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-600" />
+      <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="h-8 w-24 animate-pulse bg-gray-200 rounded-lg" />
+          <div className="h-9 w-20 animate-pulse bg-gray-200 rounded-xl" />
+        </div>
+        <div className="h-11 animate-pulse bg-gray-200 rounded-xl" />
+        <div className="space-y-3">
+          <SkeletonWineCard />
+          <SkeletonWineCard />
+          <SkeletonWineCard />
+          <SkeletonWineCard />
+        </div>
       </div>
     );
   }
@@ -182,48 +226,62 @@ export default function InventoryPage() {
       </div>
 
       {sorted.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">
-          <p className="text-lg">
-            {items.length === 0 ? "No wines in your cellar" : "No wines match your filters"}
-          </p>
-          {items.length === 0 && (
-            <Link href="/scan" className="text-rose-600 hover:underline mt-2 inline-block">
-              Scan your first bottle
+        items.length === 0 ? (
+          <div className="text-center py-16 space-y-4">
+            <p className="text-5xl">🍾</p>
+            <p className="text-lg text-gray-500">Your cellar is empty</p>
+            <Link
+              href="/scan"
+              className="inline-block rounded-xl bg-rose-600 px-6 py-3 text-white font-semibold hover:bg-rose-700 transition"
+            >
+              Scan Your First Bottle
             </Link>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="text-center py-16 text-gray-400">
+            <p className="text-lg">No wines match your {hasFilters ? "filters" : "search"}</p>
+          </div>
+        )
       ) : (
         <div className="space-y-3">
           {sorted.map((item) => (
-            <WineCard
+            <SwipeableRow
               key={item.id}
-              wine={item.wine}
-              quantity={item.quantity}
-              extra={
-                <div className="flex items-center gap-1 mt-2" onClick={(e) => e.preventDefault()}>
-                  <button
-                    onClick={() => updateQuantity(item, -1)}
-                    className="w-8 h-8 rounded-xl bg-gray-100 text-gray-600 text-lg font-medium hover:bg-gray-200 active:bg-gray-300 transition flex items-center justify-center"
-                  >
-                    −
-                  </button>
-                  <span className="w-8 text-center text-sm font-semibold text-gray-700">{item.quantity}</span>
-                  <button
-                    onClick={() => updateQuantity(item, 1)}
-                    className="w-8 h-8 rounded-xl bg-gray-100 text-gray-600 text-lg font-medium hover:bg-gray-200 active:bg-gray-300 transition flex items-center justify-center"
-                  >
-                    +
-                  </button>
-                </div>
-              }
-            />
+              onSwipeAction={() => deleteItem(item)}
+              actionLabel="Delete"
+              actionColor="bg-red-500"
+            >
+              <WineCard
+                wine={item.wine}
+                quantity={item.quantity}
+                extra={
+                  <div className="flex items-center gap-1 mt-2" onClick={(e) => e.preventDefault()}>
+                    <button
+                      onClick={() => updateQuantity(item, -1)}
+                      className="w-8 h-8 rounded-xl bg-gray-100 text-gray-600 text-lg font-medium hover:bg-gray-200 active:bg-gray-300 transition flex items-center justify-center"
+                    >
+                      −
+                    </button>
+                    <span className="w-8 text-center text-sm font-semibold text-gray-700">{item.quantity}</span>
+                    <button
+                      onClick={() => updateQuantity(item, 1)}
+                      className="w-8 h-8 rounded-xl bg-gray-100 text-gray-600 text-lg font-medium hover:bg-gray-200 active:bg-gray-300 transition flex items-center justify-center"
+                    >
+                      +
+                    </button>
+                  </div>
+                }
+              />
+            </SwipeableRow>
           ))}
         </div>
       )}
 
-      <p className="text-center text-sm text-gray-400 pt-2">
-        {items.reduce((sum, i) => sum + i.quantity, 0)} bottles total
-      </p>
+      {items.length > 0 && (
+        <p className="text-center text-sm text-gray-400 pt-2">
+          {items.reduce((sum, i) => sum + i.quantity, 0)} bottles total
+        </p>
+      )}
 
       {toast && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-5 py-2.5 rounded-2xl text-sm shadow-lg toast-animate z-50">

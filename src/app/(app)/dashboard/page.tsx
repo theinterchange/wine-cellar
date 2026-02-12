@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import WineCard from "@/components/wine-card";
+import { SkeletonStatCard, SkeletonWineCard } from "@/components/skeleton";
 import Link from "next/link";
 
 interface InventoryItem {
@@ -38,8 +39,8 @@ export default function DashboardPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadData = useCallback(() => {
-    setLoading(true);
+  const loadData = useCallback((silent = false) => {
+    if (!silent) setLoading(true);
     fetch("/api/inventory")
       .then((r) => r.json())
       .then((data) => {
@@ -52,10 +53,31 @@ export default function DashboardPage() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    const onVisChange = () => {
+      if (document.visibilityState === "visible") loadData(true);
+    };
+    document.addEventListener("visibilitychange", onVisChange);
+    return () => document.removeEventListener("visibilitychange", onVisChange);
+  }, [loadData]);
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-rose-600" />
+      <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-8 w-32 animate-pulse bg-gray-200 rounded-lg" />
+          <div className="h-9 w-24 animate-pulse bg-gray-200 rounded-xl" />
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+        </div>
+        <div className="space-y-2.5">
+          <SkeletonWineCard />
+          <SkeletonWineCard />
+          <SkeletonWineCard />
+        </div>
       </div>
     );
   }
@@ -82,7 +104,7 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Dashboard</h1>
         <div className="flex items-center gap-2">
           <button
-            onClick={loadData}
+            onClick={() => loadData()}
             className="rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-500 hover:bg-white hover:shadow-sm transition"
             title="Refresh"
           >

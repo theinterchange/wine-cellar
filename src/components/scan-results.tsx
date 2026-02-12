@@ -24,6 +24,7 @@ export default function ScanResults({ result }: ScanResultsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [quantity, setQuantity] = useState(1);
+  const [toast, setToast] = useState<string | null>(null);
 
   async function addToInventory() {
     setLoading(true);
@@ -34,11 +35,14 @@ export default function ScanResults({ result }: ScanResultsProps) {
         body: JSON.stringify({ wineId: result.id, quantity }),
       });
       if (res.ok) {
-        window.location.href = "/inventory";
+        setToast(`${result.brand} added to cellar!`);
+        setTimeout(() => router.push("/inventory"), 1500);
+      } else {
+        setToast("Failed to add to cellar");
+        setLoading(false);
       }
-    } catch (e) {
-      console.error("Failed to add to inventory", e);
-    } finally {
+    } catch {
+      setToast("Failed to add to cellar");
       setLoading(false);
     }
   }
@@ -52,11 +56,14 @@ export default function ScanResults({ result }: ScanResultsProps) {
         body: JSON.stringify({ wineId: result.id }),
       });
       if (res.ok) {
-        window.location.href = "/wishlist";
+        setToast(`${result.brand} added to wish list!`);
+        setTimeout(() => router.push("/wishlist"), 1500);
+      } else {
+        setToast("Failed to add to wish list");
+        setLoading(false);
       }
-    } catch (e) {
-      console.error("Failed to add to wishlist", e);
-    } finally {
+    } catch {
+      setToast("Failed to add to wish list");
       setLoading(false);
     }
   }
@@ -143,6 +150,12 @@ export default function ScanResults({ result }: ScanResultsProps) {
       >
         Add to Wish List
       </button>
+
+      {toast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-5 py-2.5 rounded-2xl text-sm shadow-lg z-50">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

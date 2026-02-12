@@ -10,6 +10,12 @@ export default auth((req) => {
   const isProtectedPage = protectedPaths.some((p) => pathname.startsWith(p));
   const isProtectedApi = protectedApiPaths.some((p) => pathname.startsWith(p));
 
+  // Redirect authenticated users away from auth pages
+  const authPages = ["/login", "/signup"];
+  if (authPages.includes(pathname) && req.auth) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
   if (isProtectedPage && !req.auth) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
@@ -31,5 +37,7 @@ export const config = {
     "/api/wines/:path*",
     "/api/inventory/:path*",
     "/api/wishlist/:path*",
+    "/login",
+    "/signup",
   ],
 };
