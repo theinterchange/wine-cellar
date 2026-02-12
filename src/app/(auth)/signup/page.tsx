@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { loginAction } from "../login/actions";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -31,17 +31,14 @@ export default function SignupPage() {
       return;
     }
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    });
+    const result = await loginAction({ email, password });
 
-    if (result?.error) {
+    if (!result.success) {
       setError("Account created but login failed. Please sign in.");
       setLoading(false);
     } else {
       router.push("/dashboard");
+      router.refresh();
     }
   }
 
