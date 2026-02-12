@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { loginAction } from "../login/actions";
+import { signupAction } from "./actions";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -11,30 +10,16 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const res = await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
-
-    if (!res.ok) {
-      const data = await res.json();
-      setError(data.error || "Signup failed");
-      setLoading(false);
-      return;
-    }
-
-    const result = await loginAction({ email, password });
+    const result = await signupAction({ name, email, password });
 
     if (result?.error) {
-      setError("Account created but login failed. Please sign in.");
+      setError(result.error);
       setLoading(false);
     }
   }
