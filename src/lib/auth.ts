@@ -16,7 +16,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       async authorize(credentials) {
         const email = credentials?.email as string;
         const password = credentials?.password as string;
-        if (!email || !password) return null;
+        if (!email || !password) {
+          console.log("[auth] Missing email or password");
+          return null;
+        }
 
         const [user] = await db
           .select()
@@ -24,10 +27,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           .where(eq(users.email, email))
           .limit(1);
 
-        if (!user) return null;
+        if (!user) {
+          console.log("[auth] No user found for email:", email);
+          return null;
+        }
 
         const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) return null;
+        if (!valid) {
+          console.log("[auth] Invalid password for email:", email);
+          return null;
+        }
 
         return { id: String(user.id), email: user.email, name: user.name };
       },
