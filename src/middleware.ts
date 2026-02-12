@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 
-export async function middleware(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+export default auth((req) => {
   const { pathname } = req.nextUrl;
 
   const protectedPaths = ["/dashboard", "/scan", "/inventory", "/wishlist", "/wine"];
@@ -12,16 +10,16 @@ export async function middleware(req: NextRequest) {
   const isProtectedPage = protectedPaths.some((p) => pathname.startsWith(p));
   const isProtectedApi = protectedApiPaths.some((p) => pathname.startsWith(p));
 
-  if (isProtectedPage && !token) {
+  if (isProtectedPage && !req.auth) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  if (isProtectedApi && !token) {
+  if (isProtectedApi && !req.auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: [
