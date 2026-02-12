@@ -33,12 +33,9 @@ export default function SignupPage() {
 
     const result = await loginAction({ email, password });
 
-    if (!result.success) {
+    if (result?.error) {
       setError("Account created but login failed. Please sign in.");
       setLoading(false);
-    } else {
-      router.push("/dashboard");
-      router.refresh();
     }
   }
 
