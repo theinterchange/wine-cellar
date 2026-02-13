@@ -50,7 +50,23 @@ export async function POST(req: Request) {
       .limit(1);
 
     if (existing) {
-      // Return existing wine — consistent ratings
+      // Backfill food pairings for wines created before that column existed
+      let foodPairings = existing.foodPairings;
+      if (foodPairings === null) {
+        const enrichment = await enrichWineData({
+          brand: existing.brand,
+          varietal: existing.varietal,
+          vintage: existing.vintage,
+          region: existing.region,
+          designation: existing.designation,
+        });
+        foodPairings = enrichment.foodPairings;
+        await db
+          .update(wines)
+          .set({ foodPairings })
+          .where(eq(wines.id, existing.id));
+      }
+
       return NextResponse.json({
         id: existing.id,
         brand: existing.brand,
@@ -63,7 +79,7 @@ export async function POST(req: Request) {
         estimatedRating: existing.estimatedRating,
         ratingNotes: existing.ratingNotes,
         designation: existing.designation,
-        foodPairings: existing.foodPairings,
+        foodPairings,
         marketPrice: existing.marketPrice,
       });
     }
