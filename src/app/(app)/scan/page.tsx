@@ -19,6 +19,7 @@ export default function ScanPage() {
     ratingNotes: string;
     designation: string | null;
     foodPairings: string | null;
+    marketPrice: string | null;
     imageUrl: string;
   }>(null);
   const [error, setError] = useState("");
@@ -48,8 +49,6 @@ export default function ScanPage() {
 
   return (
     <div className="max-w-lg mx-auto p-4 space-y-4">
-      <h1 className="text-2xl font-bold text-gray-900">Scan Wine Label</h1>
-
       {!result ? (
         <>
           <CameraCapture onCapture={setImage} />

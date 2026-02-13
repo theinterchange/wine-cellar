@@ -18,6 +18,7 @@ interface Wine {
   ratingNotes: string | null;
   designation: string | null;
   foodPairings: string | null;
+  marketPrice: string | null;
 }
 
 interface InventoryEntry {
@@ -193,13 +194,6 @@ export default function WineDetailPage() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
-      <button
-        onClick={() => router.back()}
-        className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
-      >
-        ← Back
-      </button>
-
       {wine.imageUrl && (
         <img
           src={wine.imageUrl}
@@ -334,6 +328,14 @@ export default function WineDetailPage() {
           )}
           <p className="text-xs text-gray-300">Rating estimated by AI based on wine knowledge</p>
         </div>
+
+        {wine.marketPrice && (
+          <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
+            <h2 className="font-semibold text-gray-900">Market Price</h2>
+            <span className="text-2xl font-bold text-green-700">{wine.marketPrice}</span>
+            <p className="text-xs text-gray-300">Average US retail price via web search</p>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
           <h2 className="font-semibold text-gray-900">Food Pairings</h2>

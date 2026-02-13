@@ -21,6 +21,7 @@ export const wines = sqliteTable("wines", {
   ratingNotes: text("rating_notes"),
   designation: text("designation"),
   foodPairings: text("food_pairings"),
+  marketPrice: text("market_price"),
   createdBy: integer("created_by").references(() => users.id),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });

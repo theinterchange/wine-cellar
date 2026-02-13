@@ -7,7 +7,6 @@ export interface WineEnrichment {
   drinkWindowEnd: number;
   estimatedRating: number;
   ratingNotes: string;
-  designation: string | null;
   foodPairings: string | null;
 }
 
@@ -16,12 +15,14 @@ export async function enrichWineData(wine: {
   varietal: string | null;
   vintage: number | null;
   region: string | null;
+  designation: string | null;
 }): Promise<WineEnrichment> {
   const wineDescription = [
     wine.brand,
     wine.varietal,
     wine.vintage,
     wine.region,
+    wine.designation,
   ]
     .filter(Boolean)
     .join(", ");
@@ -37,10 +38,10 @@ Return ONLY valid JSON with these fields:
 - drinkWindowEnd: number (year by which it should be consumed)
 - estimatedRating: number (0-100 scale, your best estimate of critic-style rating)
 - ratingNotes: string (brief 1-2 sentence explanation of the rating and drinking window)
-- designation: string or null (special designation like "Reserve", "Grand Cru", "Estate", "Single Vineyard", etc. — null if none)
 - foodPairings: string or null (3-5 specific food pairings, comma-separated, e.g. "grilled lamb, aged cheddar, mushroom risotto")
 
 Base your estimates on typical aging curves for the varietal, region, and producer quality.
+If a designation is included (e.g. Reserve, Grand Cru), factor it into your rating — designated bottlings typically score higher than standard bottlings from the same producer.
 If vintage is unknown, assume a recent vintage and give a general estimate.`,
       },
       {

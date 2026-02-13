@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { analyzeWineLabel } from "@/lib/openai";
 import { enrichWineData } from "@/lib/wine-enrichment";
+import { lookupMarketPrice } from "@/lib/wine-pricing";
 import { db } from "@/lib/db";
 import { wines } from "@/lib/db/schema";
 import { eq, and, sql } from "drizzle-orm";
@@ -63,11 +64,15 @@ export async function POST(req: Request) {
         ratingNotes: existing.ratingNotes,
         designation: existing.designation,
         foodPairings: existing.foodPairings,
+        marketPrice: existing.marketPrice,
       });
     }
 
-    // Enrich with drinking window and rating
-    const enrichment = await enrichWineData(labelData);
+    // Enrich with drinking window and rating, and look up market price
+    const [enrichment, pricing] = await Promise.all([
+      enrichWineData(labelData),
+      lookupMarketPrice(labelData),
+    ]);
 
     // Upload image to Vercel Blob
     const filename = `wine-${Date.now()}.jpg`;
@@ -89,8 +94,9 @@ export async function POST(req: Request) {
         drinkWindowEnd: enrichment.drinkWindowEnd,
         estimatedRating: enrichment.estimatedRating,
         ratingNotes: enrichment.ratingNotes,
-        designation: enrichment.designation,
+        designation: labelData.designation,
         foodPairings: enrichment.foodPairings,
+        marketPrice: pricing.marketPrice,
         createdBy: userId,
       })
       .returning({ id: wines.id });
@@ -99,6 +105,7 @@ export async function POST(req: Request) {
       id: result.id,
       ...labelData,
       ...enrichment,
+      ...pricing,
       imageUrl: blob.url,
     });
   } catch (error) {

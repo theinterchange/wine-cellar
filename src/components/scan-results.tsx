@@ -15,6 +15,7 @@ interface ScanResult {
   ratingNotes: string;
   designation: string | null;
   foodPairings: string | null;
+  marketPrice: string | null;
   imageUrl: string;
 }
 
@@ -34,6 +35,7 @@ export default function ScanResults({ result }: ScanResultsProps) {
   const [region, setRegion] = useState(result.region ?? "");
   const [designation, setDesignation] = useState(result.designation ?? "");
   const [foodPairings, setFoodPairings] = useState(result.foodPairings ?? "");
+  const [editingPairings, setEditingPairings] = useState(false);
 
   async function saveField(field: string, value: string) {
     const body: Record<string, unknown> = {};
@@ -181,20 +183,49 @@ export default function ScanResults({ result }: ScanResultsProps) {
         <div className="flex items-center gap-2">
           <span className="text-2xl font-bold text-purple-600">{result.estimatedRating}</span>
           <span className="text-sm text-gray-500">/ 100 (AI Estimated)</span>
+          {result.marketPrice && (
+            <span className="ml-auto text-lg font-bold text-green-700">{result.marketPrice}</span>
+          )}
         </div>
 
         <p className="text-sm text-gray-600 italic">{result.ratingNotes}</p>
 
         <div className="pt-2 border-t border-gray-100 space-y-1">
-          <label className="text-xs text-gray-400 font-medium">Food Pairings</label>
-          <input
-            type="text"
-            value={foodPairings}
-            onChange={(e) => setFoodPairings(e.target.value)}
-            onBlur={() => saveField("foodPairings", foodPairings)}
-            placeholder="e.g. Grilled steak, aged cheeses"
-            className="w-full text-sm text-gray-600 bg-transparent border-b border-gray-200 focus:border-purple-400 outline-none pb-0.5 transition-colors"
-          />
+          <div className="flex items-center justify-between">
+            <label className="text-xs text-gray-400 font-medium">Food Pairings</label>
+            <button
+              onClick={() => setEditingPairings(!editingPairings)}
+              className="text-xs text-purple-500 hover:text-purple-700 font-medium"
+            >
+              {editingPairings ? "Done" : "Edit"}
+            </button>
+          </div>
+          {editingPairings ? (
+            <input
+              type="text"
+              value={foodPairings}
+              onChange={(e) => setFoodPairings(e.target.value)}
+              onBlur={() => saveField("foodPairings", foodPairings)}
+              placeholder="e.g. Grilled steak, aged cheeses"
+              className="w-full text-sm text-gray-600 bg-transparent border-b border-gray-200 focus:border-purple-400 outline-none pb-0.5 transition-colors"
+              autoFocus
+            />
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {foodPairings ? (
+                foodPairings.split(",").map((pairing, i) => (
+                  <span
+                    key={i}
+                    className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium"
+                  >
+                    {pairing.trim()}
+                  </span>
+                ))
+              ) : (
+                <span className="text-sm text-gray-400 italic">No pairings yet</span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

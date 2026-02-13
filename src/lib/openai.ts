@@ -7,6 +7,7 @@ export interface LabelAnalysis {
   varietal: string | null;
   vintage: number | null;
   region: string | null;
+  designation: string | null;
 }
 
 export async function analyzeWineLabel(base64Image: string): Promise<LabelAnalysis> {
@@ -21,6 +22,7 @@ Return ONLY valid JSON with these fields:
 - varietal: string or null (grape variety, e.g. "Cabernet Sauvignon")
 - vintage: number or null (year)
 - region: string or null (wine region/appellation)
+- designation: string or null (special designation like "Reserve", "Grand Cru", "Estate", "Single Vineyard", etc. — read directly from the label text)
 
 If you cannot determine a field, set it to null.`,
       },

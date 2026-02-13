@@ -1,0 +1,1 @@
+ALTER TABLE `wines` ADD `market_price` text;

@@ -40,6 +40,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (body.region !== undefined) update.region = body.region;
   if (body.designation !== undefined) update.designation = body.designation;
   if (body.foodPairings !== undefined) update.foodPairings = body.foodPairings;
+  if (body.marketPrice !== undefined) update.marketPrice = body.marketPrice;
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
