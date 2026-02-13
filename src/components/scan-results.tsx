@@ -28,6 +28,31 @@ export default function ScanResults({ result }: ScanResultsProps) {
   const [quantity, setQuantity] = useState(1);
   const [toast, setToast] = useState<string | null>(null);
 
+  const [brand, setBrand] = useState(result.brand);
+  const [varietal, setVarietal] = useState(result.varietal ?? "");
+  const [vintage, setVintage] = useState(result.vintage != null ? String(result.vintage) : "");
+  const [region, setRegion] = useState(result.region ?? "");
+  const [designation, setDesignation] = useState(result.designation ?? "");
+  const [foodPairings, setFoodPairings] = useState(result.foodPairings ?? "");
+
+  async function saveField(field: string, value: string) {
+    const body: Record<string, unknown> = {};
+    if (field === "vintage") {
+      body[field] = value ? parseInt(value) : null;
+    } else {
+      body[field] = value || null;
+    }
+    try {
+      await fetch(`/api/wines/${result.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch {
+      setToast("Failed to save — try again");
+    }
+  }
+
   async function addToInventory() {
     setLoading(true);
     try {
@@ -37,7 +62,7 @@ export default function ScanResults({ result }: ScanResultsProps) {
         body: JSON.stringify({ wineId: result.id, quantity }),
       });
       if (res.ok) {
-        setToast(`${result.brand} added to cellar!`);
+        setToast(`${brand} added to cellar!`);
         setTimeout(() => router.push("/inventory"), 1500);
       } else {
         setToast("Failed to add to cellar");
@@ -58,7 +83,7 @@ export default function ScanResults({ result }: ScanResultsProps) {
         body: JSON.stringify({ wineId: result.id }),
       });
       if (res.ok) {
-        setToast(`${result.brand} added to wish list!`);
+        setToast(`${brand} added to wish list!`);
         setTimeout(() => router.push("/wishlist"), 1500);
       } else {
         setToast("Failed to add to wish list");
@@ -88,29 +113,60 @@ export default function ScanResults({ result }: ScanResultsProps) {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl shadow-sm border p-4 space-y-3">
-        <h2 className="text-xl font-bold text-gray-900">{result.brand}</h2>
+        <input
+          type="text"
+          value={brand}
+          onChange={(e) => setBrand(e.target.value)}
+          onBlur={() => saveField("brand", brand)}
+          className="text-xl font-bold text-gray-900 w-full bg-transparent border-b border-transparent focus:border-gray-300 outline-none pb-0.5 transition-colors"
+        />
 
-        <div className="flex flex-wrap gap-2">
-          {result.varietal && (
-            <span className="px-2.5 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
-              {result.varietal}
-            </span>
-          )}
-          {result.vintage && (
-            <span className="px-2.5 py-1 bg-gray-100 text-gray-800 rounded-full text-sm">
-              {result.vintage}
-            </span>
-          )}
-          {result.region && (
-            <span className="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full text-sm">
-              {result.region}
-            </span>
-          )}
-          {result.designation && (
-            <span className="px-2.5 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm">
-              {result.designation}
-            </span>
-          )}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-xs text-gray-400 font-medium">Varietal</label>
+            <input
+              type="text"
+              value={varietal}
+              onChange={(e) => setVarietal(e.target.value)}
+              onBlur={() => saveField("varietal", varietal)}
+              placeholder="e.g. Cabernet Sauvignon"
+              className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-purple-400 outline-none pb-0.5 transition-colors"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-gray-400 font-medium">Vintage</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={vintage}
+              onChange={(e) => setVintage(e.target.value)}
+              onBlur={() => saveField("vintage", vintage)}
+              placeholder="e.g. 2019"
+              className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-purple-400 outline-none pb-0.5 transition-colors"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-gray-400 font-medium">Region</label>
+            <input
+              type="text"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              onBlur={() => saveField("region", region)}
+              placeholder="e.g. Napa Valley"
+              className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-purple-400 outline-none pb-0.5 transition-colors"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-gray-400 font-medium">Designation</label>
+            <input
+              type="text"
+              value={designation}
+              onChange={(e) => setDesignation(e.target.value)}
+              onBlur={() => saveField("designation", designation)}
+              placeholder="e.g. Reserve"
+              className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-purple-400 outline-none pb-0.5 transition-colors"
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -129,12 +185,17 @@ export default function ScanResults({ result }: ScanResultsProps) {
 
         <p className="text-sm text-gray-600 italic">{result.ratingNotes}</p>
 
-        {result.foodPairings && (
-          <div className="pt-2 border-t border-gray-100">
-            <p className="text-xs text-gray-400 mb-1">Pairs well with</p>
-            <p className="text-sm text-gray-600">{result.foodPairings}</p>
-          </div>
-        )}
+        <div className="pt-2 border-t border-gray-100 space-y-1">
+          <label className="text-xs text-gray-400 font-medium">Food Pairings</label>
+          <input
+            type="text"
+            value={foodPairings}
+            onChange={(e) => setFoodPairings(e.target.value)}
+            onBlur={() => saveField("foodPairings", foodPairings)}
+            placeholder="e.g. Grilled steak, aged cheeses"
+            className="w-full text-sm text-gray-600 bg-transparent border-b border-gray-200 focus:border-purple-400 outline-none pb-0.5 transition-colors"
+          />
+        </div>
       </div>
 
       <div className="flex gap-3">

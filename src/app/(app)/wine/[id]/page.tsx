@@ -42,12 +42,26 @@ export default function WineDetailPage() {
   const [purchasePrice, setPurchasePrice] = useState("");
   const [notes, setNotes] = useState("");
 
+  // Wine editing state
+  const [brand, setBrand] = useState("");
+  const [varietal, setVarietal] = useState("");
+  const [vintage, setVintage] = useState("");
+  const [region, setRegion] = useState("");
+  const [designation, setDesignation] = useState("");
+  const [foodPairings, setFoodPairings] = useState("");
+
   useEffect(() => {
     Promise.all([
       fetch(`/api/wines/${id}`).then((r) => r.json()),
       fetch("/api/inventory").then((r) => r.json()),
     ]).then(([wineData, inventoryData]) => {
       setWine(wineData);
+      setBrand(wineData.brand || "");
+      setVarietal(wineData.varietal || "");
+      setVintage(wineData.vintage != null ? String(wineData.vintage) : "");
+      setRegion(wineData.region || "");
+      setDesignation(wineData.designation || "");
+      setFoodPairings(wineData.foodPairings || "");
       const entry = inventoryData.find((i: InventoryEntry) => i.wine.id === Number(id));
       if (entry) {
         setInventoryEntry(entry);
@@ -66,12 +80,41 @@ export default function WineDetailPage() {
     }
   }, [actionMsg]);
 
+  async function saveWineField(field: string, value: string) {
+    const body: Record<string, unknown> = {};
+    if (field === "vintage") {
+      body[field] = value ? parseInt(value) : null;
+    } else {
+      body[field] = value || null;
+    }
+    try {
+      const res = await fetch(`/api/wines/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error();
+      // Update local wine state
+      if (wine) {
+        const updated = { ...wine };
+        if (field === "vintage") {
+          updated.vintage = value ? parseInt(value) : null;
+        } else {
+          (updated as Record<string, unknown>)[field] = value || null;
+        }
+        setWine(updated);
+      }
+    } catch {
+      setActionMsg("Failed to save — try again");
+    }
+  }
+
   async function updateQuantity(delta: number) {
     if (!inventoryEntry) return;
     const newQty = inventoryEntry.quantity + delta;
     try {
       if (newQty < 1) {
-        if (!confirm(`This is your last bottle of ${wine?.brand}. Remove from cellar?`)) return;
+        if (!confirm(`This is your last bottle of ${brand}. Remove from cellar?`)) return;
         const res = await fetch(`/api/inventory/${inventoryEntry.id}`, { method: "DELETE" });
         if (!res.ok) throw new Error();
         setInventoryEntry(null);
@@ -112,7 +155,7 @@ export default function WineDetailPage() {
 
   async function addToInventory() {
     if (!wine) return;
-    const input = prompt(`How many bottles of ${wine.brand}?`, "1");
+    const input = prompt(`How many bottles of ${brand}?`, "1");
     if (!input) return;
     const quantity = parseInt(input);
     if (isNaN(quantity) || quantity < 1) return;
@@ -160,35 +203,69 @@ export default function WineDetailPage() {
       {wine.imageUrl && (
         <img
           src={wine.imageUrl}
-          alt={wine.brand}
+          alt={brand}
           className="w-full max-h-72 object-contain rounded-2xl bg-white shadow-sm"
         />
       )}
 
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{wine.brand}</h1>
+        <input
+          type="text"
+          value={brand}
+          onChange={(e) => setBrand(e.target.value)}
+          onBlur={() => saveWineField("brand", brand)}
+          className="text-2xl font-bold text-gray-900 tracking-tight w-full bg-transparent border-b border-transparent focus:border-gray-300 outline-none pb-0.5 transition-colors"
+        />
 
-        <div className="flex flex-wrap gap-2">
-          {wine.varietal && (
-            <span className="px-3 py-1.5 bg-rose-50 text-rose-700 rounded-full text-sm font-medium">
-              {wine.varietal}
-            </span>
-          )}
-          {wine.vintage && (
-            <span className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
-              {wine.vintage}
-            </span>
-          )}
-          {wine.region && (
-            <span className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-sm font-medium">
-              {wine.region}
-            </span>
-          )}
-          {wine.designation && (
-            <span className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-full text-sm font-medium">
-              {wine.designation}
-            </span>
-          )}
+        <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+          <h2 className="font-semibold text-gray-900">Wine Details</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500 font-medium">Varietal</label>
+              <input
+                type="text"
+                value={varietal}
+                onChange={(e) => setVarietal(e.target.value)}
+                onBlur={() => saveWineField("varietal", varietal)}
+                placeholder="e.g. Cabernet Sauvignon"
+                className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-rose-400 outline-none pb-0.5 transition-colors"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500 font-medium">Vintage</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={vintage}
+                onChange={(e) => setVintage(e.target.value)}
+                onBlur={() => saveWineField("vintage", vintage)}
+                placeholder="e.g. 2019"
+                className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-rose-400 outline-none pb-0.5 transition-colors"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500 font-medium">Region</label>
+              <input
+                type="text"
+                value={region}
+                onChange={(e) => setRegion(e.target.value)}
+                onBlur={() => saveWineField("region", region)}
+                placeholder="e.g. Napa Valley"
+                className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-rose-400 outline-none pb-0.5 transition-colors"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500 font-medium">Designation</label>
+              <input
+                type="text"
+                value={designation}
+                onChange={(e) => setDesignation(e.target.value)}
+                onBlur={() => saveWineField("designation", designation)}
+                placeholder="e.g. Reserve"
+                className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-rose-400 outline-none pb-0.5 transition-colors"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Inventory status with +/- controls */}
@@ -258,11 +335,19 @@ export default function WineDetailPage() {
           <p className="text-xs text-gray-300">Rating estimated by AI based on wine knowledge</p>
         </div>
 
-        {wine.foodPairings && (
-          <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
-            <h2 className="font-semibold text-gray-900">Food Pairings</h2>
+        <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
+          <h2 className="font-semibold text-gray-900">Food Pairings</h2>
+          <input
+            type="text"
+            value={foodPairings}
+            onChange={(e) => setFoodPairings(e.target.value)}
+            onBlur={() => saveWineField("foodPairings", foodPairings)}
+            placeholder="e.g. Grilled steak, aged cheeses"
+            className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-rose-400 outline-none pb-0.5 transition-colors"
+          />
+          {foodPairings && (
             <div className="flex flex-wrap gap-2">
-              {wine.foodPairings.split(",").map((pairing, i) => (
+              {foodPairings.split(",").map((pairing, i) => (
                 <span
                   key={i}
                   className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-sm"
@@ -271,8 +356,8 @@ export default function WineDetailPage() {
                 </span>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Cellar Notes — only when in inventory */}
         {inventoryEntry && (
