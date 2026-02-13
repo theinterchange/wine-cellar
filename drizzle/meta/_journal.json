@@ -15,6 +15,13 @@
       "when": 1770743614371,
       "tag": "0001_noisy_centennial",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1770966057355,
+      "tag": "0002_striped_cloak",
+      "breakpoints": true
     }
   ]
 }

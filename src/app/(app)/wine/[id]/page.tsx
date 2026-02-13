@@ -16,6 +16,8 @@ interface Wine {
   drinkWindowEnd: number | null;
   estimatedRating: number | null;
   ratingNotes: string | null;
+  designation: string | null;
+  foodPairings: string | null;
 }
 
 interface InventoryEntry {
@@ -182,6 +184,11 @@ export default function WineDetailPage() {
               {wine.region}
             </span>
           )}
+          {wine.designation && (
+            <span className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-full text-sm font-medium">
+              {wine.designation}
+            </span>
+          )}
         </div>
 
         {/* Inventory status with +/- controls */}
@@ -250,6 +257,22 @@ export default function WineDetailPage() {
           )}
           <p className="text-xs text-gray-300">Rating estimated by AI based on wine knowledge</p>
         </div>
+
+        {wine.foodPairings && (
+          <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
+            <h2 className="font-semibold text-gray-900">Food Pairings</h2>
+            <div className="flex flex-wrap gap-2">
+              {wine.foodPairings.split(",").map((pairing, i) => (
+                <span
+                  key={i}
+                  className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-sm"
+                >
+                  {pairing.trim()}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Cellar Notes — only when in inventory */}
         {inventoryEntry && (

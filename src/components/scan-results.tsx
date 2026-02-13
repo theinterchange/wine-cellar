@@ -13,6 +13,8 @@ interface ScanResult {
   drinkWindowEnd: number;
   estimatedRating: number;
   ratingNotes: string;
+  designation: string | null;
+  foodPairings: string | null;
   imageUrl: string;
 }
 
@@ -104,6 +106,11 @@ export default function ScanResults({ result }: ScanResultsProps) {
               {result.region}
             </span>
           )}
+          {result.designation && (
+            <span className="px-2.5 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm">
+              {result.designation}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -121,6 +128,13 @@ export default function ScanResults({ result }: ScanResultsProps) {
         </div>
 
         <p className="text-sm text-gray-600 italic">{result.ratingNotes}</p>
+
+        {result.foodPairings && (
+          <div className="pt-2 border-t border-gray-100">
+            <p className="text-xs text-gray-400 mb-1">Pairs well with</p>
+            <p className="text-sm text-gray-600">{result.foodPairings}</p>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-3">

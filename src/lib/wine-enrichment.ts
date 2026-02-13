@@ -7,6 +7,8 @@ export interface WineEnrichment {
   drinkWindowEnd: number;
   estimatedRating: number;
   ratingNotes: string;
+  designation: string | null;
+  foodPairings: string | null;
 }
 
 export async function enrichWineData(wine: {
@@ -35,6 +37,8 @@ Return ONLY valid JSON with these fields:
 - drinkWindowEnd: number (year by which it should be consumed)
 - estimatedRating: number (0-100 scale, your best estimate of critic-style rating)
 - ratingNotes: string (brief 1-2 sentence explanation of the rating and drinking window)
+- designation: string or null (special designation like "Reserve", "Grand Cru", "Estate", "Single Vineyard", etc. — null if none)
+- foodPairings: string or null (3-5 specific food pairings, comma-separated, e.g. "grilled lamb, aged cheddar, mushroom risotto")
 
 Base your estimates on typical aging curves for the varietal, region, and producer quality.
 If vintage is unknown, assume a recent vintage and give a general estimate.`,

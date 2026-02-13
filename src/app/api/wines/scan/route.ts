@@ -61,6 +61,8 @@ export async function POST(req: Request) {
         drinkWindowEnd: existing.drinkWindowEnd,
         estimatedRating: existing.estimatedRating,
         ratingNotes: existing.ratingNotes,
+        designation: existing.designation,
+        foodPairings: existing.foodPairings,
       });
     }
 
@@ -87,6 +89,8 @@ export async function POST(req: Request) {
         drinkWindowEnd: enrichment.drinkWindowEnd,
         estimatedRating: enrichment.estimatedRating,
         ratingNotes: enrichment.ratingNotes,
+        designation: enrichment.designation,
+        foodPairings: enrichment.foodPairings,
         createdBy: userId,
       })
       .returning({ id: wines.id });

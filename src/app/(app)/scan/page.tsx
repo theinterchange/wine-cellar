@@ -17,6 +17,8 @@ export default function ScanPage() {
     drinkWindowEnd: number;
     estimatedRating: number;
     ratingNotes: string;
+    designation: string | null;
+    foodPairings: string | null;
     imageUrl: string;
   }>(null);
   const [error, setError] = useState("");

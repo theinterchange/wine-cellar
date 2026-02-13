@@ -19,6 +19,8 @@ export const wines = sqliteTable("wines", {
   drinkWindowEnd: integer("drink_window_end"),
   estimatedRating: integer("estimated_rating"),
   ratingNotes: text("rating_notes"),
+  designation: text("designation"),
+  foodPairings: text("food_pairings"),
   createdBy: integer("created_by").references(() => users.id),
   createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
