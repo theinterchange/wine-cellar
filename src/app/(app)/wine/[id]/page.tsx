@@ -51,18 +51,34 @@ export default function WineDetailPage() {
   const [designation, setDesignation] = useState("");
   const [foodPairings, setFoodPairings] = useState("");
 
+  // Original values for dirty detection
+  const [original, setOriginal] = useState({
+    brand: "", varietal: "", vintage: "", region: "", designation: "", foodPairings: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [rescoring, setRescoring] = useState(false);
+
   useEffect(() => {
     Promise.all([
       fetch(`/api/wines/${id}`).then((r) => r.json()),
       fetch("/api/inventory").then((r) => r.json()),
     ]).then(([wineData, inventoryData]) => {
       setWine(wineData);
-      setBrand(wineData.brand || "");
-      setVarietal(wineData.varietal || "");
-      setVintage(wineData.vintage != null ? String(wineData.vintage) : "");
-      setRegion(wineData.region || "");
-      setDesignation(wineData.designation || "");
-      setFoodPairings(wineData.foodPairings || "");
+      const vals = {
+        brand: wineData.brand || "",
+        varietal: wineData.varietal || "",
+        vintage: wineData.vintage != null ? String(wineData.vintage) : "",
+        region: wineData.region || "",
+        designation: wineData.designation || "",
+        foodPairings: wineData.foodPairings || "",
+      };
+      setBrand(vals.brand);
+      setVarietal(vals.varietal);
+      setVintage(vals.vintage);
+      setRegion(vals.region);
+      setDesignation(vals.designation);
+      setFoodPairings(vals.foodPairings);
+      setOriginal(vals);
       const entry = inventoryData.find((i: InventoryEntry) => i.wine.id === Number(id));
       if (entry) {
         setInventoryEntry(entry);
@@ -81,13 +97,44 @@ export default function WineDetailPage() {
     }
   }, [actionMsg]);
 
-  async function saveWineField(field: string, value: string) {
-    const body: Record<string, unknown> = {};
-    if (field === "vintage") {
-      body[field] = value ? parseInt(value) : null;
-    } else {
-      body[field] = value || null;
-    }
+  const isDirty =
+    brand !== original.brand ||
+    varietal !== original.varietal ||
+    vintage !== original.vintage ||
+    region !== original.region ||
+    designation !== original.designation ||
+    foodPairings !== original.foodPairings;
+
+  function applyWineResponse(data: Wine) {
+    setWine(data);
+    const vals = {
+      brand: data.brand || "",
+      varietal: data.varietal || "",
+      vintage: data.vintage != null ? String(data.vintage) : "",
+      region: data.region || "",
+      designation: data.designation || "",
+      foodPairings: data.foodPairings || "",
+    };
+    setBrand(vals.brand);
+    setVarietal(vals.varietal);
+    setVintage(vals.vintage);
+    setRegion(vals.region);
+    setDesignation(vals.designation);
+    setFoodPairings(vals.foodPairings);
+    setOriginal(vals);
+  }
+
+  async function saveWine(rescore = false) {
+    if (rescore) setRescoring(true); else setSaving(true);
+    const body: Record<string, unknown> = {
+      brand: brand || null,
+      varietal: varietal || null,
+      vintage: vintage ? parseInt(vintage) : null,
+      region: region || null,
+      designation: designation || null,
+      foodPairings: foodPairings || null,
+    };
+    if (rescore) body.rescore = true;
     try {
       const res = await fetch(`/api/wines/${id}`, {
         method: "PATCH",
@@ -95,18 +142,14 @@ export default function WineDetailPage() {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error();
-      // Update local wine state
-      if (wine) {
-        const updated = { ...wine };
-        if (field === "vintage") {
-          updated.vintage = value ? parseInt(value) : null;
-        } else {
-          (updated as Record<string, unknown>)[field] = value || null;
-        }
-        setWine(updated);
-      }
+      const data = await res.json();
+      applyWineResponse(data);
+      setActionMsg(rescore ? "Re-scored successfully" : "Saved");
     } catch {
       setActionMsg("Failed to save — try again");
+    } finally {
+      setSaving(false);
+      setRescoring(false);
     }
   }
 
@@ -207,7 +250,6 @@ export default function WineDetailPage() {
           type="text"
           value={brand}
           onChange={(e) => setBrand(e.target.value)}
-          onBlur={() => saveWineField("brand", brand)}
           className="text-2xl font-bold text-gray-900 tracking-tight w-full bg-transparent border-b border-transparent focus:border-gray-300 outline-none pb-0.5 transition-colors"
         />
 
@@ -220,7 +262,6 @@ export default function WineDetailPage() {
                 type="text"
                 value={varietal}
                 onChange={(e) => setVarietal(e.target.value)}
-                onBlur={() => saveWineField("varietal", varietal)}
                 placeholder="e.g. Cabernet Sauvignon"
                 className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-rose-400 outline-none pb-0.5 transition-colors"
               />
@@ -232,7 +273,6 @@ export default function WineDetailPage() {
                 inputMode="numeric"
                 value={vintage}
                 onChange={(e) => setVintage(e.target.value)}
-                onBlur={() => saveWineField("vintage", vintage)}
                 placeholder="e.g. 2019"
                 className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-rose-400 outline-none pb-0.5 transition-colors"
               />
@@ -243,7 +283,6 @@ export default function WineDetailPage() {
                 type="text"
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
-                onBlur={() => saveWineField("region", region)}
                 placeholder="e.g. Napa Valley"
                 className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-rose-400 outline-none pb-0.5 transition-colors"
               />
@@ -254,7 +293,6 @@ export default function WineDetailPage() {
                 type="text"
                 value={designation}
                 onChange={(e) => setDesignation(e.target.value)}
-                onBlur={() => saveWineField("designation", designation)}
                 placeholder="e.g. Reserve"
                 className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-rose-400 outline-none pb-0.5 transition-colors"
               />
@@ -343,7 +381,6 @@ export default function WineDetailPage() {
             type="text"
             value={foodPairings}
             onChange={(e) => setFoodPairings(e.target.value)}
-            onBlur={() => saveWineField("foodPairings", foodPairings)}
             placeholder="e.g. Grilled steak, aged cheeses"
             className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-rose-400 outline-none pb-0.5 transition-colors"
           />
@@ -431,6 +468,37 @@ export default function WineDetailPage() {
           </button>
         )}
       </div>
+
+      {isDirty && (
+        <div className="fixed bottom-20 left-0 right-0 z-40">
+          <div className="max-w-lg mx-auto px-4">
+            <div className="flex gap-3 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-3">
+              <button
+                onClick={() => saveWine(false)}
+                disabled={saving || rescoring}
+                className="flex-1 rounded-xl bg-gray-900 px-4 py-2.5 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition"
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={() => saveWine(true)}
+                disabled={saving || rescoring}
+                className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
+              >
+                {rescoring ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Re-scoring...
+                  </>
+                ) : "Save & Re-score"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {actionMsg && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-5 py-2.5 rounded-2xl text-sm shadow-lg toast-animate z-50">

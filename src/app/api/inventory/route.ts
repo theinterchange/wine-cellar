@@ -29,6 +29,8 @@ export async function GET() {
         drinkWindowEnd: wines.drinkWindowEnd,
         estimatedRating: wines.estimatedRating,
         ratingNotes: wines.ratingNotes,
+        foodPairings: wines.foodPairings,
+        designation: wines.designation,
       },
     })
     .from(inventory)

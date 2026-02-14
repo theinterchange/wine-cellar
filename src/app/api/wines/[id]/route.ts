@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { wines } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
+import { enrichWineData } from "@/lib/wine-enrichment";
+import { lookupMarketPrice } from "@/lib/wine-pricing";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -33,24 +35,62 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const body = await req.json();
 
+  const { rescore, ...fields } = body;
   const update: Record<string, unknown> = {};
-  if (body.brand !== undefined) update.brand = body.brand;
-  if (body.varietal !== undefined) update.varietal = body.varietal;
-  if (body.vintage !== undefined) update.vintage = body.vintage;
-  if (body.region !== undefined) update.region = body.region;
-  if (body.designation !== undefined) update.designation = body.designation;
-  if (body.foodPairings !== undefined) update.foodPairings = body.foodPairings;
-  if (body.marketPrice !== undefined) update.marketPrice = body.marketPrice;
+  if (fields.brand !== undefined) update.brand = fields.brand;
+  if (fields.varietal !== undefined) update.varietal = fields.varietal;
+  if (fields.vintage !== undefined) update.vintage = fields.vintage;
+  if (fields.region !== undefined) update.region = fields.region;
+  if (fields.designation !== undefined) update.designation = fields.designation;
+  if (fields.foodPairings !== undefined) update.foodPairings = fields.foodPairings;
+  if (fields.marketPrice !== undefined) update.marketPrice = fields.marketPrice;
 
-  if (Object.keys(update).length === 0) {
+  if (Object.keys(update).length === 0 && !rescore) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
   }
 
-  await db.update(wines)
-    .set(update)
-    .where(and(eq(wines.id, parseInt(id)), eq(wines.createdBy, parseInt(session.user.id))));
+  const wineCondition = and(eq(wines.id, parseInt(id)), eq(wines.createdBy, parseInt(session.user.id)));
 
-  return NextResponse.json({ success: true });
+  if (Object.keys(update).length > 0) {
+    await db.update(wines).set(update).where(wineCondition);
+  }
+
+  if (rescore) {
+    // Fetch the current wine to get all fields for enrichment
+    const [current] = await db.select().from(wines).where(wineCondition).limit(1);
+    if (!current) {
+      return NextResponse.json({ error: "Wine not found" }, { status: 404 });
+    }
+
+    const [enrichment, pricing] = await Promise.all([
+      enrichWineData({
+        brand: current.brand,
+        varietal: current.varietal,
+        vintage: current.vintage,
+        region: current.region,
+        designation: current.designation,
+      }),
+      lookupMarketPrice({
+        brand: current.brand,
+        varietal: current.varietal,
+        vintage: current.vintage,
+        region: current.region,
+      }),
+    ]);
+
+    await db.update(wines).set({
+      drinkWindowStart: enrichment.drinkWindowStart,
+      drinkWindowEnd: enrichment.drinkWindowEnd,
+      estimatedRating: enrichment.estimatedRating,
+      ratingNotes: enrichment.ratingNotes,
+      foodPairings: enrichment.foodPairings,
+      marketPrice: pricing.marketPrice,
+    }).where(wineCondition);
+  }
+
+  // Return full updated wine
+  const [updated] = await db.select().from(wines).where(wineCondition).limit(1);
+  return NextResponse.json(updated);
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {

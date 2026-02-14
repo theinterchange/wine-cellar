@@ -24,6 +24,8 @@ interface InventoryItem {
     drinkWindowEnd: number | null;
     estimatedRating: number | null;
     ratingNotes: string | null;
+    foodPairings: string | null;
+    designation: string | null;
   };
 }
 
@@ -115,12 +117,27 @@ export default function InventoryPage() {
       return (
         item.wine.brand.toLowerCase().includes(q) ||
         item.wine.varietal?.toLowerCase().includes(q) ||
-        item.wine.region?.toLowerCase().includes(q)
+        item.wine.region?.toLowerCase().includes(q) ||
+        item.wine.foodPairings?.toLowerCase().includes(q)
       );
     });
 
   const sorted = sortItems(filtered, sort);
   const hasFilters = filter !== "" || statusFilter !== "all";
+
+  function getMatchedPairing(wine: InventoryItem["wine"]): string | null {
+    if (!filter) return null;
+    const q = filter.toLowerCase();
+    // Only show indicator when it matched via food pairing (not name/varietal/region)
+    if (
+      wine.brand.toLowerCase().includes(q) ||
+      wine.varietal?.toLowerCase().includes(q) ||
+      wine.region?.toLowerCase().includes(q)
+    ) return null;
+    if (!wine.foodPairings) return null;
+    const match = wine.foodPairings.split(",").find((p) => p.trim().toLowerCase().includes(q));
+    return match ? match.trim() : null;
+  }
 
   async function updateQuantity(item: InventoryItem, delta: number) {
     const newQty = item.quantity + delta;
@@ -189,7 +206,7 @@ export default function InventoryPage() {
 
       <input
         type="text"
-        placeholder="Search by name, varietal, region..."
+        placeholder="Search wines or food pairings..."
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 outline-none transition shadow-sm"
@@ -255,21 +272,31 @@ export default function InventoryPage() {
                 wine={item.wine}
                 quantity={item.quantity}
                 extra={
-                  <div className="flex items-center gap-1 mt-2" onClick={(e) => e.preventDefault()}>
-                    <button
-                      onClick={() => updateQuantity(item, -1)}
-                      className="w-8 h-8 rounded-xl bg-gray-100 text-gray-600 text-lg font-medium hover:bg-gray-200 active:bg-gray-300 transition flex items-center justify-center"
-                    >
-                      −
-                    </button>
-                    <span className="w-8 text-center text-sm font-semibold text-gray-700">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item, 1)}
-                      className="w-8 h-8 rounded-xl bg-gray-100 text-gray-600 text-lg font-medium hover:bg-gray-200 active:bg-gray-300 transition flex items-center justify-center"
-                    >
-                      +
-                    </button>
-                  </div>
+                  <>
+                    {(() => {
+                      const matched = getMatchedPairing(item.wine);
+                      return matched ? (
+                        <p className="text-xs text-amber-700 bg-amber-50 rounded-full px-2.5 py-0.5 mt-1.5 inline-block">
+                          Pairs with: {matched}
+                        </p>
+                      ) : null;
+                    })()}
+                    <div className="flex items-center gap-1 mt-2" onClick={(e) => e.preventDefault()}>
+                      <button
+                        onClick={() => updateQuantity(item, -1)}
+                        className="w-8 h-8 rounded-xl bg-gray-100 text-gray-600 text-lg font-medium hover:bg-gray-200 active:bg-gray-300 transition flex items-center justify-center"
+                      >
+                        −
+                      </button>
+                      <span className="w-8 text-center text-sm font-semibold text-gray-700">{item.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(item, 1)}
+                        className="w-8 h-8 rounded-xl bg-gray-100 text-gray-600 text-lg font-medium hover:bg-gray-200 active:bg-gray-300 transition flex items-center justify-center"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </>
                 }
               />
             </SwipeableRow>
