@@ -239,6 +239,14 @@ export default function ConsumedPage() {
                     {item.notes && (
                       <p className="text-xs text-gray-500 line-clamp-2">{item.notes}</p>
                     )}
+                    <div className="flex items-center mt-1" onClick={(e) => e.preventDefault()}>
+                      <button
+                        onClick={() => deleteItem(item)}
+                        className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 }
               />

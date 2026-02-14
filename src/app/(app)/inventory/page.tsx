@@ -309,6 +309,12 @@ export default function InventoryPage() {
                       >
                         +
                       </button>
+                      <button
+                        onClick={() => deleteItem(item)}
+                        className="ml-auto text-xs text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        Remove
+                      </button>
                     </div>
                   </>
                 }
