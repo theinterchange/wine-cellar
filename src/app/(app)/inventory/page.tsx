@@ -215,7 +215,7 @@ export default function InventoryPage() {
 
       <input
         type="text"
-        placeholder="Search name, grape, region, year, food..."
+        placeholder="Search name, grape, region, year, food pairing..."
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 outline-none transition shadow-sm"
@@ -239,31 +239,25 @@ export default function InventoryPage() {
       )}
 
       <div className="flex items-center gap-2">
-        <div className="flex flex-wrap gap-1.5 flex-1">
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+          className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white focus:border-rose-400 outline-none shadow-sm"
+        >
           {(Object.entries(STATUS_LABELS) as [StatusFilter, string][]).map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setStatusFilter(key)}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
-                statusFilter === key
-                  ? "bg-rose-600 text-white shadow-sm"
-                  : "bg-white text-gray-500 hover:bg-gray-100 shadow-sm"
-              }`}
-            >
-              {label}
-            </button>
+            <option key={key} value={key}>{key === "all" ? "Status: All" : label}</option>
           ))}
-        </div>
+        </select>
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as SortOption)}
-          className="rounded-xl border border-gray-200 px-2 py-1.5 text-xs text-gray-700 bg-white focus:border-rose-400 outline-none shadow-sm"
+          className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white focus:border-rose-400 outline-none shadow-sm"
         >
-          <option value="name">Name</option>
-          <option value="rating">Rating</option>
-          <option value="vintage">Vintage</option>
-          <option value="status">Status</option>
-          <option value="added">Added</option>
+          <option value="name">Sort: Name</option>
+          <option value="rating">Sort: Rating</option>
+          <option value="vintage">Sort: Vintage</option>
+          <option value="status">Sort: Status</option>
+          <option value="added">Sort: Added</option>
         </select>
       </div>
 

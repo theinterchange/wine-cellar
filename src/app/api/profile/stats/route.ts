@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { inventory, consumed, wines } from "@/lib/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, desc, asc } from "drizzle-orm";
 
 export async function GET() {
   const session = await auth();
@@ -68,16 +68,83 @@ export async function GET() {
     }
   }
 
+  // Average personal rating by varietal (only rated wines)
+  const avgRatingByVarietal = await db
+    .select({
+      varietal: wines.varietal,
+      avgRating: sql<number>`round(avg(${consumed.rating}), 1)`,
+      count: sql<number>`count(*)`,
+    })
+    .from(consumed)
+    .innerJoin(wines, eq(consumed.wineId, wines.id))
+    .where(sql`${consumed.userId} = ${userId} AND ${consumed.rating} IS NOT NULL AND ${wines.varietal} IS NOT NULL`)
+    .groupBy(wines.varietal)
+    .orderBy(desc(sql`avg(${consumed.rating})`));
+
+  // Vintage breakdown in cellar
+  const vintageBreakdown = await db
+    .select({
+      vintage: wines.vintage,
+      count: sql<number>`sum(${inventory.quantity})`,
+    })
+    .from(inventory)
+    .innerJoin(wines, eq(inventory.wineId, wines.id))
+    .where(sql`${inventory.userId} = ${userId} AND ${wines.vintage} IS NOT NULL`)
+    .groupBy(wines.vintage)
+    .orderBy(asc(wines.vintage));
+
+  // Top 3 consumed wines by personal rating
+  const topRated = await db
+    .select({
+      brand: wines.brand,
+      varietal: wines.varietal,
+      vintage: wines.vintage,
+      rating: consumed.rating,
+    })
+    .from(consumed)
+    .innerJoin(wines, eq(consumed.wineId, wines.id))
+    .where(sql`${consumed.userId} = ${userId} AND ${consumed.rating} IS NOT NULL`)
+    .orderBy(desc(consumed.rating))
+    .limit(3);
+
+  // Oldest bottle in cellar
+  const oldestBottle = await db
+    .select({
+      brand: wines.brand,
+      varietal: wines.varietal,
+      vintage: wines.vintage,
+    })
+    .from(inventory)
+    .innerJoin(wines, eq(inventory.wineId, wines.id))
+    .where(sql`${inventory.userId} = ${userId} AND ${wines.vintage} IS NOT NULL`)
+    .orderBy(asc(wines.vintage))
+    .limit(1);
+
+  // Total value of cellar
+  const totalValueRows = await db
+    .select({
+      total: sql<number>`coalesce(sum(${inventory.purchasePrice} * ${inventory.quantity}), 0)`,
+    })
+    .from(inventory)
+    .where(sql`${inventory.userId} = ${userId} AND ${inventory.purchasePrice} IS NOT NULL`);
+
+  const totalValue = totalValueRows[0]?.total || null;
+
   return NextResponse.json({
     cellar: {
       totalBottles: cellarRows[0]?.totalBottles ?? 0,
       totalWines: cellarRows[0]?.totalWines ?? 0,
       varietalBreakdown: cellarVarietals.filter((v) => v.varietal),
+      vintageBreakdown: vintageBreakdown.filter((v) => v.vintage),
+      oldestVintage: oldestBottle[0] ?? null,
+      totalValue,
     },
     consumed: {
       totalConsumed,
       averageRating: Math.round(consumedRows[0]?.averageRating ?? 0),
       consumedByVarietal: consumedVarietals.filter((v) => v.varietal),
+      avgRatingByVarietal: avgRatingByVarietal.filter((v) => v.varietal),
+      topRated,
     },
     milestones,
   });

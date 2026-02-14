@@ -30,6 +30,13 @@ interface InventoryEntry {
   wine: { id: number };
 }
 
+interface ConsumedRecord {
+  id: number;
+  rating: number | null;
+  notes: string | null;
+  consumedAt: string;
+}
+
 export default function WineDetailPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -37,6 +44,9 @@ export default function WineDetailPage() {
   const [inventoryEntry, setInventoryEntry] = useState<InventoryEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
+
+  // My rating from consumed records
+  const [myRating, setMyRating] = useState<ConsumedRecord | null>(null);
 
   // Metadata editing state
   const [purchaseDate, setPurchaseDate] = useState("");
@@ -60,11 +70,19 @@ export default function WineDetailPage() {
   const [consumedToast, setConsumedToast] = useState<{ id: number; wineName: string } | null>(null);
   const consumedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Inline rating modal state (for drink toast)
+  const [showDrinkRating, setShowDrinkRating] = useState(false);
+  const [drinkConsumedId, setDrinkConsumedId] = useState<number | null>(null);
+  const [drinkRatingValue, setDrinkRatingValue] = useState("");
+  const [drinkRatingNotes, setDrinkRatingNotes] = useState("");
+  const [savingDrinkRating, setSavingDrinkRating] = useState(false);
+
   useEffect(() => {
     Promise.all([
       fetch(`/api/wines/${id}`).then((r) => r.json()),
       fetch("/api/inventory").then((r) => r.json()),
-    ]).then(([wineData, inventoryData]) => {
+      fetch("/api/consumed").then((r) => r.json()),
+    ]).then(([wineData, inventoryData, consumedData]) => {
       setWine(wineData);
       const vals = {
         brand: wineData.brand || "",
@@ -87,6 +105,14 @@ export default function WineDetailPage() {
         setPurchaseDate(entry.purchaseDate || "");
         setPurchasePrice(entry.purchasePrice != null ? String(entry.purchasePrice) : "");
         setNotes(entry.notes || "");
+      }
+      // Find most recent consumed record with a rating for this wine
+      const wineConsumed = consumedData
+        .filter((c: ConsumedRecord & { wine: { id: number } }) => c.wine.id === Number(id))
+        .sort((a: ConsumedRecord, b: ConsumedRecord) => b.consumedAt.localeCompare(a.consumedAt));
+      if (wineConsumed.length > 0) {
+        const rated = wineConsumed.find((c: ConsumedRecord) => c.rating != null);
+        setMyRating(rated || wineConsumed[0]);
       }
       setLoading(false);
     });
@@ -254,6 +280,34 @@ export default function WineDetailPage() {
     }
   }
 
+  async function saveDrinkRating() {
+    if (!drinkConsumedId) return;
+    setSavingDrinkRating(true);
+    try {
+      const body: Record<string, unknown> = {
+        rating: drinkRatingValue ? parseInt(drinkRatingValue) : null,
+        notes: drinkRatingNotes || null,
+      };
+      const res = await fetch(`/api/consumed/${drinkConsumedId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error();
+      setShowDrinkRating(false);
+      setConsumedToast(null);
+      setActionMsg("Rating saved");
+      // Update local my rating
+      if (body.rating != null) {
+        setMyRating({ id: drinkConsumedId, rating: body.rating as number, notes: body.notes as string | null, consumedAt: new Date().toISOString() });
+      }
+    } catch {
+      setActionMsg("Failed to save — try again");
+    } finally {
+      setSavingDrinkRating(false);
+    }
+  }
+
   if (loading) {
     return <SkeletonWineDetail />;
   }
@@ -396,13 +450,36 @@ export default function WineDetailPage() {
         <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
           <h2 className="font-semibold text-gray-900">AI Estimated Rating</h2>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-rose-600">{wine.estimatedRating}</span>
+            <span className="text-3xl font-bold text-rose-600">{wine.estimatedRating ?? "—"}</span>
             <span className="text-sm text-gray-400">/ 100</span>
           </div>
           {wine.ratingNotes && (
             <p className="text-sm text-gray-500 italic">{wine.ratingNotes}</p>
           )}
           <p className="text-xs text-gray-300">Rating estimated by AI based on wine knowledge</p>
+        </div>
+
+        {/* My Rating section */}
+        <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
+          <h2 className="font-semibold text-gray-900">My Rating</h2>
+          {myRating?.rating != null ? (
+            <>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-purple-600">{myRating.rating}</span>
+                <span className="text-sm text-gray-400">/ 100</span>
+              </div>
+              {myRating.notes && (
+                <p className="text-sm text-gray-500 italic">{myRating.notes}</p>
+              )}
+              <p className="text-xs text-gray-300">
+                Rated {new Date(myRating.consumedAt).toLocaleDateString()}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-gray-400">
+              {myRating ? "Consumed but not yet rated" : "Not yet rated — drink one to rate it"}
+            </p>
+          )}
         </div>
 
         {wine.marketPrice && (
@@ -505,38 +582,35 @@ export default function WineDetailPage() {
             Add to Wish List
           </button>
         )}
-      </div>
 
-      {isDirty && (
-        <div className="fixed bottom-20 left-0 right-0 z-40">
-          <div className="max-w-lg mx-auto px-4">
-            <div className="flex gap-3 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-3">
-              <button
-                onClick={() => saveWine(false)}
-                disabled={saving || rescoring}
-                className="flex-1 rounded-xl bg-gray-900 px-4 py-2.5 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition"
-              >
-                {saving ? "Saving..." : "Save"}
-              </button>
-              <button
-                onClick={() => saveWine(true)}
-                disabled={saving || rescoring}
-                className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
-              >
-                {rescoring ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Re-scoring...
-                  </>
-                ) : "Save & Re-score"}
-              </button>
-            </div>
+        {/* Inline save/rescore bar — non-fixed, at end of content */}
+        {isDirty && (
+          <div className="flex gap-3 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-3">
+            <button
+              onClick={() => saveWine(false)}
+              disabled={saving || rescoring}
+              className="flex-1 rounded-xl bg-gray-900 px-4 py-2.5 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition"
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+            <button
+              onClick={() => saveWine(true)}
+              disabled={saving || rescoring}
+              className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
+            >
+              {rescoring ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Re-scoring...
+                </>
+              ) : "Save & Re-score"}
+            </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {consumedToast && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-lg">
@@ -545,8 +619,11 @@ export default function WineDetailPage() {
             <div className="flex gap-2">
               <button
                 onClick={() => {
+                  setDrinkConsumedId(consumedToast.id);
+                  setDrinkRatingValue("");
+                  setDrinkRatingNotes("");
+                  setShowDrinkRating(true);
                   setConsumedToast(null);
-                  router.push("/consumed");
                 }}
                 className="flex-1 rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold hover:bg-rose-700 transition"
               >
@@ -557,6 +634,60 @@ export default function WineDetailPage() {
                 className="flex-1 rounded-xl bg-gray-700 px-3 py-2 text-sm font-semibold hover:bg-gray-600 transition"
               >
                 Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline rating bottom sheet modal */}
+      {showDrinkRating && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={() => setShowDrinkRating(false)}>
+          <div
+            className="bg-white rounded-t-3xl w-full max-w-lg p-6 space-y-4 animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-gray-900">Rate & Note</h3>
+            <p className="text-sm text-gray-500">{brand}</p>
+
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500 font-medium">Rating (0-100)</label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="0"
+                max="100"
+                value={drinkRatingValue}
+                onChange={(e) => setDrinkRatingValue(e.target.value)}
+                placeholder="e.g. 88"
+                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 outline-none transition"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500 font-medium">Notes</label>
+              <textarea
+                rows={3}
+                value={drinkRatingNotes}
+                onChange={(e) => setDrinkRatingNotes(e.target.value)}
+                placeholder="How was it?"
+                className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-900 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 outline-none transition resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDrinkRating(false)}
+                className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveDrinkRating}
+                disabled={savingDrinkRating}
+                className="flex-1 rounded-xl bg-rose-600 px-4 py-3 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50 transition"
+              >
+                {savingDrinkRating ? "Saving..." : "Save"}
               </button>
             </div>
           </div>

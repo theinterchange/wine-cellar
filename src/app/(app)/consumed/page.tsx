@@ -212,12 +212,17 @@ export default function ConsumedPage() {
                 extra={
                   <div className="mt-2 space-y-1.5">
                     <div className="flex items-center gap-2">
+                      {item.wine.estimatedRating != null && (
+                        <span className="text-[10px] font-medium text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
+                          AI: {item.wine.estimatedRating}
+                        </span>
+                      )}
                       {item.rating != null ? (
                         <button
                           onClick={(e) => { e.preventDefault(); openRating(item); }}
                           className="text-xs font-semibold text-rose-600 bg-rose-50 rounded-full px-2.5 py-0.5 hover:bg-rose-100 transition"
                         >
-                          {item.rating}/100
+                          My: {item.rating}
                         </button>
                       ) : (
                         <button
