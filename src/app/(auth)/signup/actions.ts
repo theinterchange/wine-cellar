@@ -27,8 +27,9 @@ export async function signupAction(formData: { name: string; email: string; pass
     await signIn("credentials", {
       email,
       password,
-      redirectTo: "/dashboard",
+      redirect: false,
     });
+    return { success: true };
   } catch (error) {
     if (isRedirectError(error)) {
       throw error;

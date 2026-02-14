@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signupAction } from "./actions";
 
@@ -10,6 +11,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -17,6 +19,11 @@ export default function SignupPage() {
     setError("");
 
     const result = await signupAction({ name, email, password });
+
+    if (result?.success) {
+      router.push("/dashboard");
+      return;
+    }
 
     if (result?.error) {
       setError(result.error);
