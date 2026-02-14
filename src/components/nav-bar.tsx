@@ -1,12 +1,11 @@
 "use client";
 
-import { signOut } from "next-auth/react";
 import { usePathname, useRouter } from "next/navigation";
 
 export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
-  const mainTabs = new Set(["/dashboard", "/scan", "/inventory", "/wishlist"]);
+  const mainTabs = new Set(["/inventory", "/consumed", "/scan", "/wishlist", "/profile"]);
   const showBack = !mainTabs.has(pathname);
 
   return (
@@ -27,12 +26,7 @@ export default function NavBar() {
         ) : (
           <h1 className="text-lg font-bold text-gray-900 tracking-tight">Optimal Wine Time</h1>
         )}
-        <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          Sign Out
-        </button>
+        <div className="w-14" />
       </div>
     </header>
   );

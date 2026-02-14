@@ -4,8 +4,8 @@ import { auth } from "@/lib/auth";
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
-  const protectedPaths = ["/dashboard", "/scan", "/inventory", "/wishlist", "/wine"];
-  const protectedApiPaths = ["/api/wines", "/api/inventory", "/api/wishlist"];
+  const protectedPaths = ["/dashboard", "/scan", "/inventory", "/consumed", "/wishlist", "/wine", "/profile"];
+  const protectedApiPaths = ["/api/wines", "/api/inventory", "/api/consumed", "/api/wishlist", "/api/profile"];
 
   const isProtectedPage = protectedPaths.some((p) => pathname.startsWith(p));
   const isProtectedApi = protectedApiPaths.some((p) => pathname.startsWith(p));
@@ -13,7 +13,7 @@ export default auth((req) => {
   // Redirect authenticated users away from auth pages
   const authPages = ["/login", "/signup"];
   if (authPages.includes(pathname) && req.auth) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+    return NextResponse.redirect(new URL("/inventory", req.url));
   }
 
   if (isProtectedPage && !req.auth) {
@@ -32,11 +32,15 @@ export const config = {
     "/dashboard/:path*",
     "/scan/:path*",
     "/inventory/:path*",
+    "/consumed/:path*",
     "/wishlist/:path*",
     "/wine/:path*",
+    "/profile/:path*",
     "/api/wines/:path*",
     "/api/inventory/:path*",
+    "/api/consumed/:path*",
     "/api/wishlist/:path*",
+    "/api/profile/:path*",
     "/login",
     "/signup",
   ],

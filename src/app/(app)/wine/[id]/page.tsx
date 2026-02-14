@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import DrinkingWindowBadge from "@/components/drinking-window-badge";
 import { SkeletonWineDetail } from "@/components/skeleton";
@@ -57,6 +57,8 @@ export default function WineDetailPage() {
   });
   const [saving, setSaving] = useState(false);
   const [rescoring, setRescoring] = useState(false);
+  const [consumedToast, setConsumedToast] = useState<{ id: number; wineName: string } | null>(null);
+  const consumedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -225,6 +227,33 @@ export default function WineDetailPage() {
     setActionMsg("Added to wish list!");
   }
 
+  async function drinkOne() {
+    if (!wine || !inventoryEntry) return;
+    try {
+      const res = await fetch("/api/consumed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wineId: wine.id, inventoryId: inventoryEntry.id }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+
+      // Decrement locally
+      if (inventoryEntry.quantity <= 1) {
+        setInventoryEntry(null);
+      } else {
+        setInventoryEntry({ ...inventoryEntry, quantity: inventoryEntry.quantity - 1 });
+      }
+
+      // Show rich toast
+      setConsumedToast({ id: data.id, wineName: brand });
+      if (consumedTimerRef.current) clearTimeout(consumedTimerRef.current);
+      consumedTimerRef.current = setTimeout(() => setConsumedToast(null), 5000);
+    } catch {
+      setActionMsg("Failed to record — try again");
+    }
+  }
+
   if (loading) {
     return <SkeletonWineDetail />;
   }
@@ -326,6 +355,15 @@ export default function WineDetailPage() {
                 </button>
               </div>
             </div>
+            <button
+              onClick={drinkOne}
+              className="w-full mt-4 rounded-xl bg-green-600 px-4 py-3 text-white font-semibold text-sm hover:bg-green-700 active:bg-green-800 transition flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Drink One
+            </button>
           </div>
         )}
 
@@ -494,6 +532,31 @@ export default function WineDetailPage() {
                     Re-scoring...
                   </>
                 ) : "Save & Re-score"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {consumedToast && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-lg">
+          <div className="bg-gray-900 text-white px-5 py-4 rounded-2xl shadow-lg space-y-3">
+            <p className="text-sm font-medium">Cheers! Enjoyed {consumedToast.wineName}</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setConsumedToast(null);
+                  router.push("/consumed");
+                }}
+                className="flex-1 rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold hover:bg-rose-700 transition"
+              >
+                Rate
+              </button>
+              <button
+                onClick={() => setConsumedToast(null)}
+                className="flex-1 rounded-xl bg-gray-700 px-3 py-2 text-sm font-semibold hover:bg-gray-600 transition"
+              >
+                Done
               </button>
             </div>
           </div>

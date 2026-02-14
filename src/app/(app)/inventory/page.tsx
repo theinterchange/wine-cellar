@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useMemo, useDeferredValue } from "rea
 import WineCard from "@/components/wine-card";
 import SwipeableRow from "@/components/swipeable-row";
 import { SkeletonWineCard } from "@/components/skeleton";
-import Link from "next/link";
 
 interface InventoryItem {
   id: number;
@@ -75,7 +74,6 @@ const STATUS_LABELS: Record<StatusFilter, string> = {
 function getMatchedPairing(wine: InventoryItem["wine"], query: string): string | null {
   if (!query) return null;
   const q = query.toLowerCase();
-  // Only show indicator when it matched via food pairing (not name/varietal/region/vintage/designation)
   if (
     wine.brand.toLowerCase().includes(q) ||
     (wine.varietal?.toLowerCase().includes(q) ?? false) ||
@@ -125,6 +123,17 @@ export default function InventoryPage() {
       return () => clearTimeout(t);
     }
   }, [toast]);
+
+  const totalBottles = useMemo(() => items.reduce((sum, i) => sum + i.quantity, 0), [items]);
+  const readyCount = useMemo(() => {
+    return items.filter((i) => {
+      const s = getStatus(i.wine);
+      return s === "ready" || s === "soon";
+    }).length;
+  }, [items]);
+  const varietalCount = useMemo(() => {
+    return new Set(items.map((i) => i.wine.varietal?.toLowerCase()).filter(Boolean)).size;
+  }, [items]);
 
   const sorted = useMemo(() => {
     const filtered = items.filter((item) => {
@@ -183,11 +192,13 @@ export default function InventoryPage() {
   if (loading) {
     return (
       <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="h-8 w-24 animate-pulse bg-gray-200 rounded-lg" />
-          <div className="h-9 w-20 animate-pulse bg-gray-200 rounded-xl" />
-        </div>
+        <div className="h-8 w-24 animate-pulse bg-gray-200 rounded-lg" />
         <div className="h-11 animate-pulse bg-gray-200 rounded-xl" />
+        <div className="flex gap-3">
+          <div className="h-10 flex-1 animate-pulse bg-gray-200 rounded-xl" />
+          <div className="h-10 flex-1 animate-pulse bg-gray-200 rounded-xl" />
+          <div className="h-10 flex-1 animate-pulse bg-gray-200 rounded-xl" />
+        </div>
         <div className="space-y-3">
           <SkeletonWineCard />
           <SkeletonWineCard />
@@ -200,15 +211,7 @@ export default function InventoryPage() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Cellar</h1>
-        <Link
-          href="/scan"
-          className="rounded-xl bg-rose-600 px-4 py-2 text-sm text-white font-semibold hover:bg-rose-700 transition"
-        >
-          + Add
-        </Link>
-      </div>
+      <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Cellar</h1>
 
       <input
         type="text"
@@ -218,34 +221,50 @@ export default function InventoryPage() {
         className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 outline-none transition shadow-sm"
       />
 
-      <div className="flex items-center gap-3">
+      {items.length > 0 && (
+        <div className="flex justify-around bg-white rounded-2xl shadow-sm py-3">
+          <div className="text-center">
+            <p className="text-lg font-bold text-rose-600">{totalBottles}</p>
+            <p className="text-[10px] text-gray-400">Bottles</p>
+          </div>
+          <div className="text-center border-x border-gray-100 px-6">
+            <p className="text-lg font-bold text-green-600">{readyCount}</p>
+            <p className="text-[10px] text-gray-400">Ready</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg font-bold text-amber-600">{varietalCount}</p>
+            <p className="text-[10px] text-gray-400">Varietals</p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2">
+        <div className="flex flex-wrap gap-1.5 flex-1">
+          {(Object.entries(STATUS_LABELS) as [StatusFilter, string][]).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setStatusFilter(key)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                statusFilter === key
+                  ? "bg-rose-600 text-white shadow-sm"
+                  : "bg-white text-gray-500 hover:bg-gray-100 shadow-sm"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value as SortOption)}
-          className="rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-700 bg-white focus:border-rose-400 outline-none shadow-sm"
+          className="rounded-xl border border-gray-200 px-2 py-1.5 text-xs text-gray-700 bg-white focus:border-rose-400 outline-none shadow-sm"
         >
-          <option value="name">Name A-Z</option>
+          <option value="name">Name</option>
           <option value="rating">Rating</option>
           <option value="vintage">Vintage</option>
           <option value="status">Status</option>
-          <option value="added">Date Added</option>
+          <option value="added">Added</option>
         </select>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {(Object.entries(STATUS_LABELS) as [StatusFilter, string][]).map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setStatusFilter(key)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-              statusFilter === key
-                ? "bg-rose-600 text-white shadow-sm"
-                : "bg-white text-gray-500 hover:bg-gray-100 shadow-sm"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
       </div>
 
       {sorted.length === 0 ? (
@@ -253,12 +272,7 @@ export default function InventoryPage() {
           <div className="text-center py-16 space-y-4">
             <p className="text-5xl">🍾</p>
             <p className="text-lg text-gray-500">Your cellar is empty</p>
-            <Link
-              href="/scan"
-              className="inline-block rounded-xl bg-rose-600 px-6 py-3 text-white font-semibold hover:bg-rose-700 transition"
-            >
-              Scan Your First Bottle
-            </Link>
+            <p className="text-sm text-gray-400">Tap the scan button to add your first bottle</p>
           </div>
         ) : (
           <div className="text-center py-16 text-gray-400">
@@ -308,12 +322,6 @@ export default function InventoryPage() {
             </SwipeableRow>
           ))}
         </div>
-      )}
-
-      {items.length > 0 && (
-        <p className="text-center text-sm text-gray-400 pt-2">
-          {items.reduce((sum, i) => sum + i.quantity, 0)} bottles total
-        </p>
       )}
 
       {toast && (

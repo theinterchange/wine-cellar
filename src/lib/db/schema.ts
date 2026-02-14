@@ -46,6 +46,15 @@ export const wishlist = sqliteTable("wishlist", {
   addedAt: text("added_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
+export const consumed = sqliteTable("consumed", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  wineId: integer("wine_id").notNull().references(() => wines.id),
+  rating: integer("rating"),
+  notes: text("notes"),
+  consumedAt: text("consumed_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
 export const passwordResetTokens = sqliteTable("password_reset_tokens", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id),
