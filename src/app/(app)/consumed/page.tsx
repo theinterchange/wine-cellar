@@ -257,9 +257,9 @@ export default function ConsumedPage() {
 
       {/* Rating modal */}
       {ratingItem && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end justify-center" onClick={() => setRatingItem(null)}>
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4" onClick={() => setRatingItem(null)}>
           <div
-            className="bg-white rounded-t-3xl w-full max-w-lg p-6 space-y-4 animate-slide-up"
+            className="bg-white rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-bold text-gray-900">Rate &amp; Note</h3>
