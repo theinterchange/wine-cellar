@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useDeferredValue } from "react";
 import WineCard from "@/components/wine-card";
 import SwipeableRow from "@/components/swipeable-row";
 import { SkeletonWineCard } from "@/components/skeleton";
@@ -72,6 +72,22 @@ const STATUS_LABELS: Record<StatusFilter, string> = {
   past: "Past Peak",
 };
 
+function getMatchedPairing(wine: InventoryItem["wine"], query: string): string | null {
+  if (!query) return null;
+  const q = query.toLowerCase();
+  // Only show indicator when it matched via food pairing (not name/varietal/region/vintage/designation)
+  if (
+    wine.brand.toLowerCase().includes(q) ||
+    (wine.varietal?.toLowerCase().includes(q) ?? false) ||
+    (wine.region?.toLowerCase().includes(q) ?? false) ||
+    (wine.designation?.toLowerCase().includes(q) ?? false) ||
+    (wine.vintage != null && String(wine.vintage).includes(q))
+  ) return null;
+  if (!wine.foodPairings) return null;
+  const match = wine.foodPairings.split(",").find((p) => p.trim().toLowerCase().includes(q));
+  return match ? match.trim() : null;
+}
+
 export default function InventoryPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,6 +95,7 @@ export default function InventoryPage() {
   const [sort, setSort] = useState<SortOption>("name");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [toast, setToast] = useState<string | null>(null);
+  const deferredFilter = useDeferredValue(filter);
 
   const loadData = useCallback((silent = false) => {
     if (!silent) setLoading(true);
@@ -109,35 +126,24 @@ export default function InventoryPage() {
     }
   }, [toast]);
 
-  const filtered = items
-    .filter((item) => {
+  const sorted = useMemo(() => {
+    const filtered = items.filter((item) => {
       if (statusFilter !== "all" && getStatus(item.wine) !== statusFilter) return false;
-      if (!filter) return true;
-      const q = filter.toLowerCase();
+      if (!deferredFilter) return true;
+      const q = deferredFilter.toLowerCase();
       return (
         item.wine.brand.toLowerCase().includes(q) ||
-        item.wine.varietal?.toLowerCase().includes(q) ||
-        item.wine.region?.toLowerCase().includes(q) ||
-        item.wine.foodPairings?.toLowerCase().includes(q)
+        (item.wine.varietal?.toLowerCase().includes(q) ?? false) ||
+        (item.wine.region?.toLowerCase().includes(q) ?? false) ||
+        (item.wine.designation?.toLowerCase().includes(q) ?? false) ||
+        (item.wine.vintage != null && String(item.wine.vintage).includes(q)) ||
+        (item.wine.foodPairings?.toLowerCase().includes(q) ?? false)
       );
     });
+    return sortItems(filtered, sort);
+  }, [items, deferredFilter, statusFilter, sort]);
 
-  const sorted = sortItems(filtered, sort);
   const hasFilters = filter !== "" || statusFilter !== "all";
-
-  function getMatchedPairing(wine: InventoryItem["wine"]): string | null {
-    if (!filter) return null;
-    const q = filter.toLowerCase();
-    // Only show indicator when it matched via food pairing (not name/varietal/region)
-    if (
-      wine.brand.toLowerCase().includes(q) ||
-      wine.varietal?.toLowerCase().includes(q) ||
-      wine.region?.toLowerCase().includes(q)
-    ) return null;
-    if (!wine.foodPairings) return null;
-    const match = wine.foodPairings.split(",").find((p) => p.trim().toLowerCase().includes(q));
-    return match ? match.trim() : null;
-  }
 
   async function updateQuantity(item: InventoryItem, delta: number) {
     const newQty = item.quantity + delta;
@@ -206,7 +212,7 @@ export default function InventoryPage() {
 
       <input
         type="text"
-        placeholder="Search wines or food pairings..."
+        placeholder="Search name, grape, region, year, food..."
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-rose-400 focus:ring-2 focus:ring-rose-100 outline-none transition shadow-sm"
@@ -274,7 +280,7 @@ export default function InventoryPage() {
                 extra={
                   <>
                     {(() => {
-                      const matched = getMatchedPairing(item.wine);
+                      const matched = getMatchedPairing(item.wine, deferredFilter);
                       return matched ? (
                         <p className="text-xs text-amber-700 bg-amber-50 rounded-full px-2.5 py-0.5 mt-1.5 inline-block">
                           Pairs with: {matched}
