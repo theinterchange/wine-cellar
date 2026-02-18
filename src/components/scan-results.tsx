@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface ScanResult {
@@ -38,25 +38,92 @@ export default function ScanResults({ result }: ScanResultsProps) {
   const [pairingInput, setPairingInput] = useState("");
   const [editingPairings, setEditingPairings] = useState(false);
 
-  async function saveField(field: string, value: string) {
-    const body: Record<string, unknown> = {};
-    if (field === "vintage") {
-      body[field] = value ? parseInt(value) : null;
-    } else {
-      body[field] = value || null;
+  // Live display state (updated after rescore)
+  const [drinkWindowStart, setDrinkWindowStart] = useState(result.drinkWindowStart);
+  const [drinkWindowEnd, setDrinkWindowEnd] = useState(result.drinkWindowEnd);
+  const [estimatedRating, setEstimatedRating] = useState(result.estimatedRating);
+  const [ratingNotes, setRatingNotes] = useState(result.ratingNotes);
+  const [marketPrice, setMarketPrice] = useState(result.marketPrice);
+
+  // Dirty tracking
+  const [original, setOriginal] = useState({
+    brand: result.brand,
+    varietal: result.varietal ?? "",
+    vintage: result.vintage != null ? String(result.vintage) : "",
+    region: result.region ?? "",
+    designation: result.designation ?? "",
+    foodPairings: result.foodPairings ?? "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [rescoring, setRescoring] = useState(false);
+
+  const isDirty =
+    brand !== original.brand ||
+    varietal !== original.varietal ||
+    vintage !== original.vintage ||
+    region !== original.region ||
+    designation !== original.designation ||
+    foodPairings !== original.foodPairings;
+
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(null), 2500);
+      return () => clearTimeout(t);
     }
+  }, [toast]);
+
+  async function saveWine(rescore = false) {
+    if (rescore) setRescoring(true); else setSaving(true);
+    const body: Record<string, unknown> = {
+      brand: brand || null,
+      varietal: varietal || null,
+      vintage: vintage ? parseInt(vintage) : null,
+      region: region || null,
+      designation: designation || null,
+      foodPairings: foodPairings || null,
+    };
+    if (rescore) body.rescore = true;
     try {
-      await fetch(`/api/wines/${result.id}`, {
+      const res = await fetch(`/api/wines/${result.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      // Update live display
+      setDrinkWindowStart(data.drinkWindowStart);
+      setDrinkWindowEnd(data.drinkWindowEnd);
+      setEstimatedRating(data.estimatedRating);
+      setRatingNotes(data.ratingNotes);
+      setMarketPrice(data.marketPrice);
+      // Update fields from response
+      const vals = {
+        brand: data.brand || "",
+        varietal: data.varietal || "",
+        vintage: data.vintage != null ? String(data.vintage) : "",
+        region: data.region || "",
+        designation: data.designation || "",
+        foodPairings: data.foodPairings || "",
+      };
+      setBrand(vals.brand);
+      setVarietal(vals.varietal);
+      setVintage(vals.vintage);
+      setRegion(vals.region);
+      setDesignation(vals.designation);
+      setFoodPairings(vals.foodPairings);
+      setOriginal(vals);
+      setToast(rescore ? "Re-scored successfully" : "Saved");
     } catch {
       setToast("Failed to save — try again");
+    } finally {
+      setSaving(false);
+      setRescoring(false);
     }
   }
 
   async function addToInventory() {
+    if (isDirty) await saveWine(false);
     setLoading(true);
     try {
       const res = await fetch("/api/inventory", {
@@ -78,6 +145,7 @@ export default function ScanResults({ result }: ScanResultsProps) {
   }
 
   async function addToWishlist() {
+    if (isDirty) await saveWine(false);
     setLoading(true);
     try {
       const res = await fetch("/api/wishlist", {
@@ -100,9 +168,9 @@ export default function ScanResults({ result }: ScanResultsProps) {
 
   const currentYear = new Date().getFullYear();
   const status =
-    currentYear < result.drinkWindowStart
+    currentYear < drinkWindowStart
       ? "Too Early"
-      : currentYear > result.drinkWindowEnd
+      : currentYear > drinkWindowEnd
         ? "Past Peak"
         : "Ready to Drink";
 
@@ -120,7 +188,6 @@ export default function ScanResults({ result }: ScanResultsProps) {
           type="text"
           value={brand}
           onChange={(e) => setBrand(e.target.value)}
-          onBlur={() => saveField("brand", brand)}
           className="text-xl font-bold text-gray-900 w-full bg-transparent border-b border-transparent focus:border-gray-300 outline-none pb-0.5 transition-colors"
         />
 
@@ -131,7 +198,6 @@ export default function ScanResults({ result }: ScanResultsProps) {
               type="text"
               value={varietal}
               onChange={(e) => setVarietal(e.target.value)}
-              onBlur={() => saveField("varietal", varietal)}
               placeholder="e.g. Cabernet Sauvignon"
               className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-purple-400 outline-none pb-0.5 transition-colors"
             />
@@ -143,7 +209,6 @@ export default function ScanResults({ result }: ScanResultsProps) {
               inputMode="numeric"
               value={vintage}
               onChange={(e) => setVintage(e.target.value)}
-              onBlur={() => saveField("vintage", vintage)}
               placeholder="e.g. 2019"
               className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-purple-400 outline-none pb-0.5 transition-colors"
             />
@@ -154,7 +219,6 @@ export default function ScanResults({ result }: ScanResultsProps) {
               type="text"
               value={region}
               onChange={(e) => setRegion(e.target.value)}
-              onBlur={() => saveField("region", region)}
               placeholder="e.g. Napa Valley"
               className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-purple-400 outline-none pb-0.5 transition-colors"
             />
@@ -165,7 +229,6 @@ export default function ScanResults({ result }: ScanResultsProps) {
               type="text"
               value={designation}
               onChange={(e) => setDesignation(e.target.value)}
-              onBlur={() => saveField("designation", designation)}
               placeholder="e.g. Reserve"
               className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-purple-400 outline-none pb-0.5 transition-colors"
             />
@@ -177,19 +240,19 @@ export default function ScanResults({ result }: ScanResultsProps) {
             {status}
           </span>
           <span className="text-sm text-gray-600">
-            Drink {result.drinkWindowStart}–{result.drinkWindowEnd}
+            Drink {drinkWindowStart}–{drinkWindowEnd}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold text-purple-600">{result.estimatedRating}</span>
+          <span className="text-2xl font-bold text-purple-600">{estimatedRating}</span>
           <span className="text-sm text-gray-500">/ 100 (AI Estimated)</span>
-          {result.marketPrice && (
-            <span className="ml-auto text-lg font-bold text-green-700">{result.marketPrice}</span>
+          {marketPrice && (
+            <span className="ml-auto text-lg font-bold text-green-700">{marketPrice}</span>
           )}
         </div>
 
-        <p className="text-sm text-gray-600 italic">{result.ratingNotes}</p>
+        <p className="text-sm text-gray-600 italic">{ratingNotes}</p>
 
         <div className="pt-2 border-t border-gray-100 space-y-2">
           <div className="flex items-center justify-between">
@@ -201,7 +264,6 @@ export default function ScanResults({ result }: ScanResultsProps) {
             </div>
             <button
               onClick={() => {
-                if (editingPairings) saveField("foodPairings", foodPairings);
                 setEditingPairings(!editingPairings);
               }}
               className="text-xs text-purple-500 hover:text-purple-700 font-medium"
@@ -270,6 +332,9 @@ export default function ScanResults({ result }: ScanResultsProps) {
         </div>
       </div>
 
+      {/* Spacer when save bar is visible */}
+      {isDirty && <div className="h-20" />}
+
       <div className="flex gap-3">
         <div className="flex items-center gap-2 bg-white rounded-lg border px-3 py-2">
           <label className="text-sm text-gray-600">Qty:</label>
@@ -297,6 +362,43 @@ export default function ScanResults({ result }: ScanResultsProps) {
       >
         Add to Wish List
       </button>
+
+      {/* Sticky save bar */}
+      {isDirty && (
+        <div className="fixed bottom-16 left-0 right-0 z-40">
+          <div className="max-w-lg mx-auto px-4 pb-3">
+            <div className="flex gap-3 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-3">
+              <button
+                onClick={() => saveWine(false)}
+                disabled={saving || rescoring}
+                className="flex-1 rounded-xl bg-gray-900 px-4 py-2.5 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition"
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={() => saveWine(true)}
+                disabled={saving || rescoring}
+                className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-50 transition flex items-center justify-center gap-1.5"
+              >
+                {rescoring ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Re-scoring...
+                  </>
+                ) : (
+                  <span className="flex flex-col items-center leading-tight">
+                    <span>Save & Re-score</span>
+                    <span className="text-[10px] font-normal opacity-75">AI estimate — may vary</span>
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-5 py-2.5 rounded-2xl text-sm shadow-lg z-50">

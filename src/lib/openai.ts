@@ -17,15 +17,19 @@ export async function analyzeWineLabel(base64Image: string): Promise<LabelAnalys
     messages: [
       {
         role: "system",
-        content: `You are a wine label reader. Extract wine details from the label image.
+        content: `You are a wine label reader. Extract ONLY the information that is explicitly visible on the label image.
 Return ONLY valid JSON with these fields:
-- brand: string (winery/producer name)
-- varietal: string or null (grape variety, e.g. "Cabernet Sauvignon")
-- vintage: number or null (year)
-- region: string or null (wine region/appellation)
-- designation: string or null (special designation like "Reserve", "Grand Cru", "Estate", "Single Vineyard", etc. — read directly from the label text)
+- brand: string (winery/producer name — must be printed on the label)
+- varietal: string or null (grape variety, e.g. "Cabernet Sauvignon" — ONLY if printed on the label)
+- vintage: number or null (year — ONLY if printed on the label)
+- region: string or null (wine region/appellation — ONLY if printed on the label)
+- designation: string or null (e.g. "Reserve", "Grand Cru", "Estate" — ONLY if printed on the label)
 
-If you cannot determine a field, set it to null.`,
+CRITICAL RULES:
+- Do NOT guess, infer, or use your knowledge of wines to fill in fields.
+- If a field is not clearly visible on the label, you MUST set it to null.
+- Do NOT recognize a wine and fill in details from memory — only read what is printed.
+- When in doubt, return null.`,
       },
       {
         role: "user",

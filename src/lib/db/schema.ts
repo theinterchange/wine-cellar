@@ -55,6 +55,43 @@ export const consumed = sqliteTable("consumed", {
   consumedAt: text("consumed_at").notNull().$defaultFn(() => new Date().toISOString()),
 });
 
+export const friendships = sqliteTable("friendships", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  requesterId: integer("requester_id").notNull().references(() => users.id),
+  addresseeId: integer("addressee_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("pending"), // "pending" | "accepted" | "declined"
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+  respondedAt: text("responded_at"),
+});
+
+export const inviteLinks = sqliteTable("invite_links", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id),
+  code: text("code").notNull().unique(),
+  expiresAt: text("expires_at").notNull(),
+  usedBy: integer("used_by").references(() => users.id),
+  usedAt: text("used_at"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
+export const cellarShares = sqliteTable("cellar_shares", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  ownerId: integer("owner_id").notNull().references(() => users.id),
+  friendId: integer("friend_id").notNull().references(() => users.id),
+  grantedAt: text("granted_at").notNull().$defaultFn(() => new Date().toISOString()),
+  revokedAt: text("revoked_at"),
+});
+
+export const wineRecommendations = sqliteTable("wine_recommendations", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  fromUserId: integer("from_user_id").notNull().references(() => users.id),
+  toUserId: integer("to_user_id").notNull().references(() => users.id),
+  wineId: integer("wine_id").notNull().references(() => wines.id),
+  message: text("message"),
+  readAt: text("read_at"),
+  createdAt: text("created_at").notNull().$defaultFn(() => new Date().toISOString()),
+});
+
 export const passwordResetTokens = sqliteTable("password_reset_tokens", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => users.id),

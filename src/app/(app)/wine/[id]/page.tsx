@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import DrinkingWindowBadge from "@/components/drinking-window-badge";
 import { SkeletonWineDetail } from "@/components/skeleton";
+import RecommendModal from "@/components/recommend-modal";
 
 interface Wine {
   id: number;
@@ -77,6 +78,7 @@ export default function WineDetailPage() {
   const [drinkRatingValue, setDrinkRatingValue] = useState("");
   const [drinkRatingNotes, setDrinkRatingNotes] = useState("");
   const [savingDrinkRating, setSavingDrinkRating] = useState(false);
+  const [showRecommend, setShowRecommend] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -630,6 +632,16 @@ export default function WineDetailPage() {
             Add to Wish List
           </button>
         )}
+
+        <button
+          onClick={() => setShowRecommend(true)}
+          className="w-full rounded-xl border border-gray-200 px-4 py-3 text-gray-600 font-semibold text-sm hover:bg-gray-50 transition flex items-center justify-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+          </svg>
+          Recommend to Friend
+        </button>
       </div>
 
       {/* Sticky save bar — fixed at bottom when dirty */}
@@ -756,6 +768,12 @@ export default function WineDetailPage() {
           {actionMsg}
         </div>
       )}
+
+      <RecommendModal
+        open={showRecommend}
+        onClose={() => setShowRecommend(false)}
+        preselectedWine={wine ? { id: wine.id, brand: wine.brand, varietal: wine.varietal, vintage: wine.vintage } : null}
+      />
     </div>
   );
 }

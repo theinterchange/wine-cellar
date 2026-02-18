@@ -89,6 +89,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (fields.foodPairings === undefined && !current.foodPairings) {
       rescoreUpdate.foodPairings = enrichment.foodPairings;
     }
+    // Backfill varietal from enrichment if wine has none
+    if (!current.varietal && enrichment.varietal) {
+      rescoreUpdate.varietal = enrichment.varietal;
+    }
     await db.update(wines).set(rescoreUpdate).where(wineCondition);
   }
 
