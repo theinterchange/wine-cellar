@@ -93,8 +93,22 @@ export async function GET() {
     .groupBy(wines.vintage)
     .orderBy(asc(wines.vintage));
 
+  // Top 3 in cellar by AI estimated rating
+  const topRatedCellar = await db
+    .select({
+      brand: wines.brand,
+      varietal: wines.varietal,
+      vintage: wines.vintage,
+      rating: wines.estimatedRating,
+    })
+    .from(inventory)
+    .innerJoin(wines, eq(inventory.wineId, wines.id))
+    .where(sql`${inventory.userId} = ${userId} AND ${wines.estimatedRating} IS NOT NULL`)
+    .orderBy(desc(wines.estimatedRating))
+    .limit(3);
+
   // Top 3 consumed wines by personal rating
-  const topRated = await db
+  const topRatedConsumed = await db
     .select({
       brand: wines.brand,
       varietal: wines.varietal,
@@ -138,13 +152,14 @@ export async function GET() {
       vintageBreakdown: vintageBreakdown.filter((v) => v.vintage),
       oldestVintage: oldestBottle[0] ?? null,
       totalValue,
+      topRatedCellar,
     },
     consumed: {
       totalConsumed,
       averageRating: Math.round(consumedRows[0]?.averageRating ?? 0),
       consumedByVarietal: consumedVarietals.filter((v) => v.varietal),
       avgRatingByVarietal: avgRatingByVarietal.filter((v) => v.varietal),
-      topRated,
+      topRatedConsumed,
     },
     milestones,
   });

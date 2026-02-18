@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
 
 interface Stats {
   cellar: {
@@ -12,13 +11,14 @@ interface Stats {
     vintageBreakdown: { vintage: number; count: number }[];
     oldestVintage: { brand: string; varietal: string | null; vintage: number } | null;
     totalValue: number | null;
+    topRatedCellar: { brand: string; varietal: string | null; vintage: number | null; rating: number }[];
   };
   consumed: {
     totalConsumed: number;
     averageRating: number;
     consumedByVarietal: { varietal: string; count: number }[];
     avgRatingByVarietal: { varietal: string; avgRating: number; count: number }[];
-    topRated: { brand: string; varietal: string | null; vintage: number | null; rating: number }[];
+    topRatedConsumed: { brand: string; varietal: string | null; vintage: number | null; rating: number }[];
   };
   milestones: {
     key: string;
@@ -31,7 +31,6 @@ interface Stats {
 
 export default function ProfilePage() {
   const { data: session } = useSession();
-  const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -93,6 +92,28 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
+
+          {/* Top Rated in Cellar */}
+          {stats.cellar.topRatedCellar.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
+              <h2 className="font-semibold text-gray-900">Top Rated in Cellar</h2>
+              <div className="space-y-2">
+                {stats.cellar.topRatedCellar.map((w, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <span className="text-lg font-bold text-rose-600 w-8 text-center">{i + 1}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{w.brand}</p>
+                      <p className="text-xs text-gray-400">
+                        {[w.varietal, w.vintage].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                    <span className="text-sm font-bold text-purple-600">{w.rating}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-400">Based on AI estimated ratings</p>
+            </div>
+          )}
 
           {/* Oldest Bottle & Total Value */}
           {(stats.cellar.oldestVintage || stats.cellar.totalValue) && (
@@ -169,14 +190,14 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Top Rated Wines */}
-          {stats.consumed.topRated.length > 0 && (
+          {/* Top Consumed */}
+          {stats.consumed.topRatedConsumed.length > 0 && (
             <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
-              <h2 className="font-semibold text-gray-900">Top Rated Wines</h2>
+              <h2 className="font-semibold text-gray-900">Top Consumed</h2>
               <div className="space-y-2">
-                {stats.consumed.topRated.map((w, i) => (
+                {stats.consumed.topRatedConsumed.map((w, i) => (
                   <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                    <span className="text-lg font-bold text-rose-600 w-8 text-center">{i + 1}</span>
+                    <span className="text-lg font-bold text-green-600 w-8 text-center">{i + 1}</span>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-gray-900 truncate">{w.brand}</p>
                       <p className="text-xs text-gray-400">
@@ -187,6 +208,7 @@ export default function ProfilePage() {
                   </div>
                 ))}
               </div>
+              <p className="text-[10px] text-gray-400">Based on your personal ratings</p>
             </div>
           )}
 
@@ -232,26 +254,6 @@ export default function ProfilePage() {
           </div>
         </>
       )}
-
-      <button
-        onClick={() => router.push("/friends")}
-        className="w-full bg-white rounded-2xl shadow-sm p-4 flex items-center justify-between hover:bg-gray-50 transition text-left"
-      >
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center">
-            <svg className="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-          <div>
-            <p className="font-semibold text-gray-900 text-sm">Friends</p>
-            <p className="text-xs text-gray-400">Share cellars & recommend wines</p>
-          </div>
-        </div>
-        <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
 
       <button
         onClick={() => signOut({ callbackUrl: "/login" })}

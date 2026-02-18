@@ -34,11 +34,11 @@ const tabs = [
     ),
   },
   {
-    href: "/wishlist",
-    label: "Wishlist",
+    href: "/friends",
+    label: "Friends",
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
       </svg>
     ),
   },
@@ -58,7 +58,7 @@ export default function BottomTabs() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm shadow-[0_-1px_3px_rgba(0,0,0,0.05)] pb-[env(safe-area-inset-bottom)] z-50 overflow-visible">
-      <div className="flex justify-around items-end max-w-lg mx-auto">
+      <div className="relative flex justify-around items-center h-16 max-w-lg mx-auto">
         {tabs.map((tab) => {
           const active = pathname.startsWith(tab.href);
           const isCenter = "isCenter" in tab && tab.isCenter;
@@ -68,7 +68,7 @@ export default function BottomTabs() {
               <Link
                 key={tab.href}
                 href={tab.href}
-                className="flex flex-col items-center -mt-5"
+                className="absolute left-1/2 -translate-x-1/2 -top-5 flex flex-col items-center"
               >
                 <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition ${
                   active ? "bg-rose-700" : "bg-rose-600 hover:bg-rose-700"
