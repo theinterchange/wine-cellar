@@ -13,6 +13,7 @@ export interface LabelAnalysis {
 export async function analyzeWineLabel(base64Image: string): Promise<LabelAnalysis> {
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
+    temperature: 0,
     messages: [
       {
         role: "system",

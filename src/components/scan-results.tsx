@@ -35,6 +35,7 @@ export default function ScanResults({ result }: ScanResultsProps) {
   const [region, setRegion] = useState(result.region ?? "");
   const [designation, setDesignation] = useState(result.designation ?? "");
   const [foodPairings, setFoodPairings] = useState(result.foodPairings ?? "");
+  const [pairingInput, setPairingInput] = useState("");
   const [editingPairings, setEditingPairings] = useState(false);
 
   async function saveField(field: string, value: string) {
@@ -190,41 +191,81 @@ export default function ScanResults({ result }: ScanResultsProps) {
 
         <p className="text-sm text-gray-600 italic">{result.ratingNotes}</p>
 
-        <div className="pt-2 border-t border-gray-100 space-y-1">
+        <div className="pt-2 border-t border-gray-100 space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-xs text-gray-400 font-medium">Food Pairings</label>
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs text-gray-400 font-medium">Food Pairings</label>
+              <svg className="w-3 h-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </div>
             <button
-              onClick={() => setEditingPairings(!editingPairings)}
+              onClick={() => {
+                if (editingPairings) saveField("foodPairings", foodPairings);
+                setEditingPairings(!editingPairings);
+              }}
               className="text-xs text-purple-500 hover:text-purple-700 font-medium"
             >
               {editingPairings ? "Done" : "Edit"}
             </button>
           </div>
-          {editingPairings ? (
+          <div className="flex flex-wrap gap-1.5">
+            {foodPairings ? (
+              foodPairings.split(",").map((pairing, i) => {
+                const trimmed = pairing.trim();
+                if (!trimmed) return null;
+                return (
+                  <span
+                    key={i}
+                    className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium flex items-center gap-1"
+                  >
+                    {trimmed}
+                    {editingPairings && (
+                      <button
+                        onClick={() => {
+                          const tags = foodPairings.split(",").map(t => t.trim()).filter(Boolean);
+                          tags.splice(i, 1);
+                          setFoodPairings(tags.join(", "));
+                        }}
+                        className="text-purple-400 hover:text-purple-600 transition"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </span>
+                );
+              })
+            ) : (
+              <span className="text-sm text-gray-400 italic">No pairings yet — tap Edit to add</span>
+            )}
+          </div>
+          {editingPairings && (
             <input
               type="text"
-              value={foodPairings}
-              onChange={(e) => setFoodPairings(e.target.value)}
-              onBlur={() => saveField("foodPairings", foodPairings)}
-              placeholder="e.g. Grilled steak, aged cheeses"
+              value={pairingInput}
+              onChange={(e) => setPairingInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") {
+                  e.preventDefault();
+                  const val = pairingInput.trim().replace(/,+$/, "").trim();
+                  if (val) {
+                    setFoodPairings(foodPairings ? `${foodPairings}, ${val}` : val);
+                    setPairingInput("");
+                  }
+                } else if (e.key === "Backspace" && !pairingInput) {
+                  const tags = foodPairings.split(",").map(t => t.trim()).filter(Boolean);
+                  if (tags.length > 0) {
+                    tags.pop();
+                    setFoodPairings(tags.join(", "));
+                  }
+                }
+              }}
+              placeholder="Type a pairing and press Enter"
               className="w-full text-sm text-gray-600 bg-transparent border-b border-gray-200 focus:border-purple-400 outline-none pb-0.5 transition-colors"
               autoFocus
             />
-          ) : (
-            <div className="flex flex-wrap gap-1.5">
-              {foodPairings ? (
-                foodPairings.split(",").map((pairing, i) => (
-                  <span
-                    key={i}
-                    className="px-2.5 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium"
-                  >
-                    {pairing.trim()}
-                  </span>
-                ))
-              ) : (
-                <span className="text-sm text-gray-400 italic">No pairings yet</span>
-              )}
-            </div>
           )}
         </div>
       </div>

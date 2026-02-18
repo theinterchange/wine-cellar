@@ -65,6 +65,7 @@ export default function WineDetailPage() {
   const [original, setOriginal] = useState({
     brand: "", varietal: "", vintage: "", region: "", designation: "", foodPairings: "",
   });
+  const [pairingInput, setPairingInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [rescoring, setRescoring] = useState(false);
   const [consumedToast, setConsumedToast] = useState<{ id: number; wineName: string } | null>(null);
@@ -337,7 +338,12 @@ export default function WineDetailPage() {
         />
 
         <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
-          <h2 className="font-semibold text-gray-900">Wine Details</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold text-gray-900">Wine Details</h2>
+            <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-xs text-gray-500 font-medium">Varietal</label>
@@ -382,6 +388,96 @@ export default function WineDetailPage() {
             </div>
           </div>
         </div>
+
+        <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold text-gray-900">Food Pairings</h2>
+            <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {foodPairings ? (
+              foodPairings.split(",").map((pairing, i) => {
+                const trimmed = pairing.trim();
+                if (!trimmed) return null;
+                return (
+                  <span
+                    key={i}
+                    className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-sm flex items-center gap-1.5"
+                  >
+                    {trimmed}
+                    <button
+                      onClick={() => {
+                        const tags = foodPairings.split(",").map(t => t.trim()).filter(Boolean);
+                        tags.splice(i, 1);
+                        setFoodPairings(tags.join(", "));
+                      }}
+                      className="text-amber-400 hover:text-amber-600 transition"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </span>
+                );
+              })
+            ) : (
+              <span className="text-sm text-gray-400 italic">No pairings yet — type below to add</span>
+            )}
+          </div>
+          <input
+            type="text"
+            value={pairingInput}
+            onChange={(e) => setPairingInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === ",") {
+                e.preventDefault();
+                const val = pairingInput.trim().replace(/,+$/, "").trim();
+                if (val) {
+                  setFoodPairings(foodPairings ? `${foodPairings}, ${val}` : val);
+                  setPairingInput("");
+                }
+              } else if (e.key === "Backspace" && !pairingInput) {
+                const tags = foodPairings.split(",").map(t => t.trim()).filter(Boolean);
+                if (tags.length > 0) {
+                  tags.pop();
+                  setFoodPairings(tags.join(", "));
+                }
+              }
+            }}
+            placeholder="Type a pairing and press Enter"
+            className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-rose-400 outline-none pb-0.5 transition-colors"
+          />
+        </div>
+
+        {/* Save/rescore bar — right below editable fields */}
+        {isDirty && (
+          <div className="flex gap-3 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-3">
+            <button
+              onClick={() => saveWine(false)}
+              disabled={saving || rescoring}
+              className="flex-1 rounded-xl bg-gray-900 px-4 py-2.5 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition"
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+            <button
+              onClick={() => saveWine(true)}
+              disabled={saving || rescoring}
+              className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
+            >
+              {rescoring ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Re-scoring...
+                </>
+              ) : "Save & Re-score"}
+            </button>
+          </div>
+        )}
 
         {/* Inventory status with +/- controls */}
         {inventoryEntry && (
@@ -490,29 +586,6 @@ export default function WineDetailPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
-          <h2 className="font-semibold text-gray-900">Food Pairings</h2>
-          <input
-            type="text"
-            value={foodPairings}
-            onChange={(e) => setFoodPairings(e.target.value)}
-            placeholder="e.g. Grilled steak, aged cheeses"
-            className="w-full text-sm text-gray-900 bg-transparent border-b border-gray-200 focus:border-rose-400 outline-none pb-0.5 transition-colors"
-          />
-          {foodPairings && (
-            <div className="flex flex-wrap gap-2">
-              {foodPairings.split(",").map((pairing, i) => (
-                <span
-                  key={i}
-                  className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full text-sm"
-                >
-                  {pairing.trim()}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Cellar Notes — only when in inventory */}
         {inventoryEntry && (
           <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
@@ -581,34 +654,6 @@ export default function WineDetailPage() {
           >
             Add to Wish List
           </button>
-        )}
-
-        {/* Inline save/rescore bar — non-fixed, at end of content */}
-        {isDirty && (
-          <div className="flex gap-3 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-3">
-            <button
-              onClick={() => saveWine(false)}
-              disabled={saving || rescoring}
-              className="flex-1 rounded-xl bg-gray-900 px-4 py-2.5 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition"
-            >
-              {saving ? "Saving..." : "Save"}
-            </button>
-            <button
-              onClick={() => saveWine(true)}
-              disabled={saving || rescoring}
-              className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
-            >
-              {rescoring ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Re-scoring...
-                </>
-              ) : "Save & Re-score"}
-            </button>
-          </div>
         )}
       </div>
 

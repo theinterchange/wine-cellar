@@ -29,6 +29,7 @@ export async function enrichWineData(wine: {
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
+    temperature: 0,
     messages: [
       {
         role: "system",
@@ -38,7 +39,7 @@ Return ONLY valid JSON with these fields:
 - drinkWindowEnd: number (year by which it should be consumed)
 - estimatedRating: number (0-100 scale, your best estimate of critic-style rating)
 - ratingNotes: string (brief 1-2 sentence explanation of the rating and drinking window)
-- foodPairings: string or null (3-5 specific food pairings, comma-separated, e.g. "grilled lamb, aged cheddar, mushroom risotto")
+- foodPairings: string or null (3-5 specific food pairings that complement this wine's flavor profile, body, and tannin structure. Match pairings to the varietal and region — e.g. pair bold Cabernet with rich meats, pair crisp Sauvignon Blanc with seafood. Be specific: "pan-seared duck breast" not just "duck". Comma-separated.)
 
 Base your estimates on typical aging curves for the varietal, region, and producer quality.
 If a designation is included (e.g. Reserve, Grand Cru), factor it into your rating — designated bottlings typically score higher than standard bottlings from the same producer.
