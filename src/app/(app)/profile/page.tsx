@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 
 interface Stats {
@@ -33,6 +33,22 @@ export default function ProfilePage() {
   const { data: session } = useSession();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [ratingsTab, setRatingsTab] = useState<string | null>(null);
+
+  const ratingsTabs = useMemo(() => {
+    if (!stats) return [];
+    const tabs: { key: string; label: string }[] = [];
+    if (stats.cellar.topRatedCellar.length > 0) tabs.push({ key: "cellar", label: "Top Cellar" });
+    if (stats.consumed.topRatedConsumed.length > 0) tabs.push({ key: "consumed", label: "Top Consumed" });
+    if (stats.consumed.avgRatingByVarietal.length > 0) tabs.push({ key: "varietal", label: "By Varietal" });
+    return tabs;
+  }, [stats]);
+
+  useEffect(() => {
+    if (ratingsTabs.length > 0 && ratingsTab === null) {
+      setRatingsTab(ratingsTabs[0].key);
+    }
+  }, [ratingsTabs, ratingsTab]);
 
   useEffect(() => {
     fetch("/api/profile/stats")
@@ -92,28 +108,6 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
-
-          {/* Top Rated in Cellar */}
-          {stats.cellar.topRatedCellar.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
-              <h2 className="font-semibold text-gray-900">Top Rated in Cellar</h2>
-              <div className="space-y-2">
-                {stats.cellar.topRatedCellar.map((w, i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                    <span className="text-lg font-bold text-rose-600 w-8 text-center">{i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{w.brand}</p>
-                      <p className="text-xs text-gray-400">
-                        {[w.varietal, w.vintage].filter(Boolean).join(" · ")}
-                      </p>
-                    </div>
-                    <span className="text-sm font-bold text-purple-600">{w.rating}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[10px] text-gray-400">Based on AI estimated ratings</p>
-            </div>
-          )}
 
           {/* Oldest Bottle & Total Value */}
           {(stats.cellar.oldestVintage || stats.cellar.totalValue) && (
@@ -190,43 +184,79 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Top Consumed */}
-          {stats.consumed.topRatedConsumed.length > 0 && (
+          {/* Ratings (tabbed) */}
+          {ratingsTabs.length > 0 && (
             <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
-              <h2 className="font-semibold text-gray-900">Top Consumed</h2>
-              <div className="space-y-2">
-                {stats.consumed.topRatedConsumed.map((w, i) => (
-                  <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                    <span className="text-lg font-bold text-green-600 w-8 text-center">{i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{w.brand}</p>
-                      <p className="text-xs text-gray-400">
-                        {[w.varietal, w.vintage].filter(Boolean).join(" · ")}
-                      </p>
-                    </div>
-                    <span className="text-sm font-bold text-purple-600">{w.rating}</span>
-                  </div>
+              <h2 className="font-semibold text-gray-900">Ratings</h2>
+              <div className="flex gap-1.5 bg-gray-100 rounded-full p-1">
+                {ratingsTabs.map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setRatingsTab(t.key)}
+                    className={`flex-1 text-xs font-medium py-1.5 rounded-full transition ${
+                      ratingsTab === t.key
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
                 ))}
               </div>
-              <p className="text-[10px] text-gray-400">Based on your personal ratings</p>
-            </div>
-          )}
 
-          {/* Average Rating by Varietal */}
-          {stats.consumed.avgRatingByVarietal.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-sm p-5 space-y-3">
-              <h2 className="font-semibold text-gray-900">Avg Rating by Varietal</h2>
-              <div className="space-y-2">
-                {stats.consumed.avgRatingByVarietal.map((v) => (
-                  <div key={v.varietal} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
-                    <div>
-                      <span className="text-sm text-gray-900">{v.varietal}</span>
-                      <span className="text-[10px] text-gray-400 ml-1.5">({v.count} rated)</span>
-                    </div>
-                    <span className="text-sm font-bold text-purple-600">{v.avgRating}</span>
+              {ratingsTab === "cellar" && (
+                <>
+                  <div className="space-y-2">
+                    {stats.cellar.topRatedCellar.map((w, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                        <span className="text-lg font-bold text-rose-600 w-8 text-center">{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{w.brand}</p>
+                          <p className="text-xs text-gray-400">
+                            {[w.varietal, w.vintage].filter(Boolean).join(" · ")}
+                          </p>
+                        </div>
+                        <span className="text-sm font-bold text-purple-600">{w.rating}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                  <p className="text-[10px] text-gray-400">Based on AI estimated ratings</p>
+                </>
+              )}
+
+              {ratingsTab === "consumed" && (
+                <>
+                  <div className="space-y-2">
+                    {stats.consumed.topRatedConsumed.map((w, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                        <span className="text-lg font-bold text-green-600 w-8 text-center">{i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{w.brand}</p>
+                          <p className="text-xs text-gray-400">
+                            {[w.varietal, w.vintage].filter(Boolean).join(" · ")}
+                          </p>
+                        </div>
+                        <span className="text-sm font-bold text-purple-600">{w.rating}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-gray-400">Based on your personal ratings</p>
+                </>
+              )}
+
+              {ratingsTab === "varietal" && (
+                <div className="space-y-2">
+                  {stats.consumed.avgRatingByVarietal.map((v) => (
+                    <div key={v.varietal} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
+                      <div>
+                        <span className="text-sm text-gray-900">{v.varietal}</span>
+                        <span className="text-[10px] text-gray-400 ml-1.5">({v.count} rated)</span>
+                      </div>
+                      <span className="text-sm font-bold text-purple-600">{v.avgRating}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

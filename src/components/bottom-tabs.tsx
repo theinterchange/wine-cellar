@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -65,20 +66,22 @@ export default function BottomTabs() {
 
           if (isCenter) {
             return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className="absolute left-1/2 -translate-x-1/2 -top-5 flex flex-col items-center"
-              >
-                <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition ${
-                  active ? "bg-rose-700" : "bg-rose-600 hover:bg-rose-700"
-                }`}>
-                  <span className="text-white">{tab.icon}</span>
-                </div>
-                <span className={`text-[10px] mt-0.5 font-medium ${active ? "text-rose-600" : "text-gray-400"}`}>
-                  {tab.label}
-                </span>
-              </Link>
+              <Fragment key={tab.href}>
+                <div className="w-14" aria-hidden="true" />
+                <Link
+                  href={tab.href}
+                  className="absolute left-1/2 -translate-x-1/2 -top-5 flex flex-col items-center"
+                >
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition ${
+                    active ? "bg-rose-700" : "bg-rose-600 hover:bg-rose-700"
+                  }`}>
+                    <span className="text-white">{tab.icon}</span>
+                  </div>
+                  <span className={`text-[10px] mt-0.5 font-medium ${active ? "text-rose-600" : "text-gray-400"}`}>
+                    {tab.label}
+                  </span>
+                </Link>
+              </Fragment>
             );
           }
 
