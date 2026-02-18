@@ -451,33 +451,8 @@ export default function WineDetailPage() {
           />
         </div>
 
-        {/* Save/rescore bar — right below editable fields */}
-        {isDirty && (
-          <div className="flex gap-3 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-3">
-            <button
-              onClick={() => saveWine(false)}
-              disabled={saving || rescoring}
-              className="flex-1 rounded-xl bg-gray-900 px-4 py-2.5 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition"
-            >
-              {saving ? "Saving..." : "Save"}
-            </button>
-            <button
-              onClick={() => saveWine(true)}
-              disabled={saving || rescoring}
-              className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
-            >
-              {rescoring ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Re-scoring...
-                </>
-              ) : "Save & Re-score"}
-            </button>
-          </div>
-        )}
+        {/* Spacer to prevent content from hiding behind fixed save bar */}
+        {isDirty && <div className="h-20" />}
 
         {/* Inventory status with +/- controls */}
         {inventoryEntry && (
@@ -656,6 +631,43 @@ export default function WineDetailPage() {
           </button>
         )}
       </div>
+
+      {/* Sticky save bar — fixed at bottom when dirty */}
+      {isDirty && (
+        <div className="fixed bottom-16 left-0 right-0 z-40">
+          <div className="max-w-lg mx-auto px-4 pb-3">
+            <div className="flex gap-3 bg-white/95 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 p-3">
+              <button
+                onClick={() => saveWine(false)}
+                disabled={saving || rescoring}
+                className="flex-1 rounded-xl bg-gray-900 px-4 py-2.5 text-white text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 transition"
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+              <button
+                onClick={() => saveWine(true)}
+                disabled={saving || rescoring}
+                className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-50 transition flex items-center justify-center gap-1.5"
+              >
+                {rescoring ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Re-scoring...
+                  </>
+                ) : (
+                  <span className="flex flex-col items-center leading-tight">
+                    <span>Save & Re-score</span>
+                    <span className="text-[10px] font-normal opacity-75">AI estimate — may vary</span>
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {consumedToast && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-lg">

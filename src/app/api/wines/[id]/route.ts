@@ -78,14 +78,18 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       }),
     ]);
 
-    await db.update(wines).set({
+    const rescoreUpdate: Record<string, unknown> = {
       drinkWindowStart: enrichment.drinkWindowStart,
       drinkWindowEnd: enrichment.drinkWindowEnd,
       estimatedRating: enrichment.estimatedRating,
       ratingNotes: enrichment.ratingNotes,
-      foodPairings: enrichment.foodPairings,
       marketPrice: pricing.marketPrice,
-    }).where(wineCondition);
+    };
+    // Only use AI food pairings if the user didn't submit their own and none exist
+    if (fields.foodPairings === undefined && !current.foodPairings) {
+      rescoreUpdate.foodPairings = enrichment.foodPairings;
+    }
+    await db.update(wines).set(rescoreUpdate).where(wineCondition);
   }
 
   // Return full updated wine
