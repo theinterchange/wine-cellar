@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
-  const mainTabs = new Set(["/inventory", "/consumed", "/scan", "/wishlist", "/profile"]);
+  const mainTabs = new Set(["/inventory", "/consumed", "/scan", "/friends", "/profile"]);
   const showBack = !mainTabs.has(pathname);
 
   return (

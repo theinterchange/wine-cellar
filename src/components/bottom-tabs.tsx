@@ -89,7 +89,7 @@ export default function BottomTabs() {
             <Link
               key={tab.href}
               href={tab.href}
-              className={`flex flex-col items-center py-2 px-2 text-[10px] transition-colors ${
+              className={`flex-1 flex flex-col items-center py-2 text-[10px] transition-colors ${
                 active ? "text-rose-600" : "text-gray-400 hover:text-gray-600"
               }`}
             >
