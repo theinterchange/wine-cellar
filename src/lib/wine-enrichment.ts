@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export interface WineEnrichment {
   drinkWindowStart: number;
@@ -26,14 +26,11 @@ export async function enrichWineData(wine: {
     .filter(Boolean)
     .join(", ");
 
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    temperature: 0,
-    messages: [
-      {
-        role: "system",
-        content: `You are a wine expert. Given a wine, estimate its optimal drinking window and quality rating.
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    generationConfig: { responseMimeType: "application/json" },
+    systemInstruction: `You are a wine expert. Given a wine, estimate its optimal drinking window and quality rating.
 Return ONLY valid JSON with these fields:
 - drinkWindowStart: number (year to start drinking)
 - drinkWindowEnd: number (year by which it should be consumed)
@@ -45,18 +42,14 @@ Return ONLY valid JSON with these fields:
 Base your estimates on typical aging curves for the varietal, region, and producer quality.
 If a designation is included (e.g. Reserve, Grand Cru), factor it into your rating — designated bottlings typically score higher than standard bottlings from the same producer.
 If vintage is unknown, assume a recent vintage and give a general estimate.`,
-      },
-      {
-        role: "user",
-        content: `Estimate the drinking window and rating for: ${wineDescription}`,
-      },
-    ],
-    max_tokens: 300,
-    response_format: { type: "json_object" },
   });
 
-  const content = response.choices[0]?.message?.content;
-  if (!content) throw new Error("No response from OpenAI");
+  const result = await model.generateContent(
+    `Estimate the drinking window and rating for: ${wineDescription}`
+  );
+
+  const content = result.response.text();
+  if (!content) throw new Error("No response from Gemini");
 
   return JSON.parse(content) as WineEnrichment;
 }

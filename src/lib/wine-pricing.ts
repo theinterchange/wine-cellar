@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export async function lookupMarketPrice(wine: {
   brand: string;
@@ -11,25 +11,20 @@ export async function lookupMarketPrice(wine: {
     .join(", ");
 
   try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-search-preview",
-      web_search_options: {},
-      messages: [
-        {
-          role: "system",
-          content: `You are a wine pricing expert. Given a wine, search for its current average US retail price.
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash",
+      tools: [{ googleSearchRetrieval: {} }],
+      systemInstruction: `You are a wine pricing expert. Given a wine, search for its current average US retail price.
 Return ONLY valid JSON with this field:
 - marketPrice: string (e.g. "$45" or "$30-50") — the typical US retail price. Use null if you truly cannot find any pricing information.`,
-        },
-        {
-          role: "user",
-          content: `What is the average US retail price for: ${wineDescription}`,
-        },
-      ],
     });
 
-    const content = response.choices[0]?.message?.content;
+    const result = await model.generateContent(
+      `What is the average US retail price for: ${wineDescription}`
+    );
+
+    const content = result.response.text();
     if (!content) return { marketPrice: null };
 
     const jsonMatch = content.match(/\{[\s\S]*\}/);

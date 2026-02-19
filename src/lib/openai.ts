@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export interface LabelAnalysis {
   brand: string;
@@ -9,14 +9,11 @@ export interface LabelAnalysis {
 }
 
 export async function analyzeWineLabel(base64Image: string): Promise<LabelAnalysis> {
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    temperature: 0,
-    messages: [
-      {
-        role: "system",
-        content: `You are a wine label reader. Extract ONLY the information that is explicitly visible on the label image.
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+  const model = genAI.getGenerativeModel({
+    model: "gemini-2.0-flash",
+    generationConfig: { responseMimeType: "application/json" },
+    systemInstruction: `You are a wine label reader. Extract ONLY the information that is explicitly visible on the label image.
 Return ONLY valid JSON with these fields:
 - brand: string (winery/producer name — must be printed on the label)
 - varietal: string or null (grape variety, e.g. "Cabernet Sauvignon" — ONLY if printed on the label)
@@ -29,24 +26,15 @@ CRITICAL RULES:
 - If a field is not clearly visible on the label, you MUST set it to null.
 - Do NOT recognize a wine and fill in details from memory — only read what is printed.
 - When in doubt, return null.`,
-      },
-      {
-        role: "user",
-        content: [
-          {
-            type: "image_url",
-            image_url: { url: `data:image/jpeg;base64,${base64Image}` },
-          },
-          { type: "text", text: "Extract the wine details from this label." },
-        ],
-      },
-    ],
-    max_tokens: 300,
-    response_format: { type: "json_object" },
   });
 
-  const content = response.choices[0]?.message?.content;
-  if (!content) throw new Error("No response from OpenAI");
+  const result = await model.generateContent([
+    { inlineData: { data: base64Image, mimeType: "image/jpeg" } },
+    "Extract the wine details from this label.",
+  ]);
+
+  const content = result.response.text();
+  if (!content) throw new Error("No response from Gemini");
 
   return JSON.parse(content) as LabelAnalysis;
 }
