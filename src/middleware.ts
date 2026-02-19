@@ -4,8 +4,8 @@ import { auth } from "@/lib/auth";
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
-  const protectedPaths = ["/dashboard", "/scan", "/inventory", "/consumed", "/wishlist", "/wine", "/profile"];
-  const protectedApiPaths = ["/api/wines", "/api/inventory", "/api/consumed", "/api/wishlist", "/api/profile"];
+  const protectedPaths = ["/dashboard", "/scan", "/inventory", "/consumed", "/wishlist", "/wine", "/profile", "/friends"];
+  const protectedApiPaths = ["/api/wines", "/api/inventory", "/api/consumed", "/api/wishlist", "/api/profile", "/api/friends"];
 
   const isProtectedPage = protectedPaths.some((p) => pathname.startsWith(p));
   const isProtectedApi = protectedApiPaths.some((p) => pathname.startsWith(p));
@@ -41,6 +41,8 @@ export const config = {
     "/api/consumed/:path*",
     "/api/wishlist/:path*",
     "/api/profile/:path*",
+    "/friends/:path*",
+    "/api/friends/:path*",
     "/login",
     "/signup",
   ],
