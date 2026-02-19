@@ -20,19 +20,22 @@ function SignupForm() {
     setLoading(true);
     setError("");
 
-    const result = await signupAction({ name, email, password });
-
-    if (result?.success) {
-      if (inviteCode) {
-        router.push(`/invite/${inviteCode}`);
-      } else {
-        router.push("/dashboard");
+    try {
+      const result = await signupAction({ name, email, password });
+      if (result?.success) {
+        if (inviteCode) {
+          router.push(`/invite/${inviteCode}`);
+        } else {
+          router.push("/dashboard");
+        }
+        return;
       }
-      return;
-    }
-
-    if (result?.error) {
-      setError(result.error);
+      if (result?.error) {
+        setError(result.error);
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
       setLoading(false);
     }
   }

@@ -15,13 +15,16 @@ export async function signupAction(formData: { name: string; email: string; pass
     return { error: "All fields are required" };
   }
 
-  const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  if (existing) {
-    return { error: "Email already registered" };
+  try {
+    const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    if (existing) {
+      return { error: "Email already registered" };
+    }
+    const passwordHash = await bcrypt.hash(password, 10);
+    await db.insert(users).values({ email, passwordHash, name });
+  } catch {
+    return { error: "Failed to create account. Please try again." };
   }
-
-  const passwordHash = await bcrypt.hash(password, 10);
-  await db.insert(users).values({ email, passwordHash, name });
 
   try {
     await signIn("credentials", {
