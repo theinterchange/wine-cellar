@@ -51,3 +51,4 @@ sqlite.db-shm
 # uploads
 public/uploads/*
 !public/uploads/.gitkeep
+.env*.local
