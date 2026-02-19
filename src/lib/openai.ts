@@ -11,7 +11,7 @@ export interface LabelAnalysis {
 export async function analyzeWineLabel(base64Image: string): Promise<LabelAnalysis> {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
+    model: "gemini-2.5-flash",
     generationConfig: { responseMimeType: "application/json" },
     systemInstruction: `You are a wine label reader. Extract ONLY the information that is explicitly visible on the label image.
 Return ONLY valid JSON with these fields:
