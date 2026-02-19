@@ -1,7 +1,5 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 export async function lookupMarketPrice(wine: {
   brand: string;
   varietal: string | null;
@@ -13,6 +11,7 @@ export async function lookupMarketPrice(wine: {
     .join(", ");
 
   try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
     const response = await openai.chat.completions.create({
       model: "gpt-4o-search-preview",
       web_search_options: {},

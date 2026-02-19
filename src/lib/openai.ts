@@ -1,7 +1,5 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 export interface LabelAnalysis {
   brand: string;
   varietal: string | null;
@@ -11,6 +9,7 @@ export interface LabelAnalysis {
 }
 
 export async function analyzeWineLabel(base64Image: string): Promise<LabelAnalysis> {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
     temperature: 0,

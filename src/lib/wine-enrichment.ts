@@ -1,7 +1,5 @@
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 export interface WineEnrichment {
   drinkWindowStart: number;
   drinkWindowEnd: number;
@@ -28,6 +26,7 @@ export async function enrichWineData(wine: {
     .filter(Boolean)
     .join(", ");
 
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
     temperature: 0,
