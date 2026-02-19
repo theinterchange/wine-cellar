@@ -1,40 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1770699892098,
-      "tag": "0000_flat_lilith",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1770743614371,
-      "tag": "0001_noisy_centennial",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1770966057355,
-      "tag": "0002_striped_cloak",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1771008821016,
-      "tag": "0003_quick_tomas",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1771051622535,
-      "tag": "0004_cultured_madripoor",
+      "version": "7",
+      "when": 1771538453269,
+      "tag": "0000_magical_lyja",
       "breakpoints": true
     }
   ]

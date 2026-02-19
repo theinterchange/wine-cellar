@@ -41,7 +41,7 @@ function LoginForm() {
       <div className="w-full max-w-sm">
         <div className="bg-white rounded-2xl shadow-lg p-8 space-y-6">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900">Optimal Wine Time</h1>
+            <h1 className="text-2xl font-bold text-gray-900">It's Wine Time</h1>
             <p className="mt-2 text-sm text-gray-500">Sign in to your cellar</p>
           </div>
 

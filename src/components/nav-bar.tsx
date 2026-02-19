@@ -20,11 +20,11 @@ export default function NavBar() {
               ← Back
             </button>
             <h1 className="text-lg font-bold text-gray-900 tracking-tight absolute left-1/2 -translate-x-1/2">
-              Optimal Wine Time
+              It's Wine Time
             </h1>
           </>
         ) : (
-          <h1 className="text-lg font-bold text-gray-900 tracking-tight">Optimal Wine Time</h1>
+          <h1 className="text-lg font-bold text-gray-900 tracking-tight">It's Wine Time</h1>
         )}
         <div className="w-14" />
       </div>

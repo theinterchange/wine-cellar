@@ -19,7 +19,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Optimal Wine Time",
+  title: "It's Wine Time",
   description: "Track your wine cellar and know when to drink",
 };
 
