@@ -14,7 +14,7 @@ export async function lookupMarketPrice(wine: {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
-      tools: [{ googleSearchRetrieval: {} }],
+      tools: [{ googleSearch: {} }],
       systemInstruction: `You are a wine pricing expert. Given a wine, search for its current average US retail price.
 Return ONLY valid JSON with this field:
 - marketPrice: string (e.g. "$45" or "$30-50") — the typical US retail price. Use null if you truly cannot find any pricing information.`,
